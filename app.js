@@ -144,7 +144,6 @@
         feedbackEl.textContent = "正確答案：" + item.answer;
         if (hasPreviewImage(item)) {
           comparePanel.hidden = false;
-          drawPreviewToCanvas(compareCanvas, item.handwritingImage);
           compareAnswer.textContent = item.answer;
           compareHint.textContent = "注音：" + (item.hint || "");
         }
@@ -155,6 +154,14 @@
       }
 
       questionList.appendChild(fragment);
+
+      if (item.isRevealed && hasPreviewImage(item)) {
+        var appendedCard = questionList.lastElementChild;
+        var appendedCanvas = appendedCard ? appendedCard.querySelector(".compare-canvas") : null;
+        if (appendedCanvas) {
+          drawPreviewToCanvas(appendedCanvas, item.handwritingImage);
+        }
+      }
     });
   }
 
