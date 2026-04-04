@@ -23,7 +23,6 @@
   var activePads = [];
 
   initializeState();
-  setupCanvas();
   bindEvents();
   render();
 
@@ -167,7 +166,7 @@
 
     lesson.items.forEach(function (item) {
       item.isDone = false;
-    }));
+    });
 
     lesson.currentIndex = 0;
     clearPads();
@@ -200,7 +199,6 @@
     bankDialog.hidden = true;
   }
 
-  function setupCanvas() {
   function createPad(canvas) {
     var ctx = canvas.getContext("2d");
     var pad = {
