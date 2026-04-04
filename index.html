@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>生字出題器</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">國小三下國語</p>
+        <h1>生字出題器</h1>
+        <p class="hero-text">選課後直接在手機上作答，點空格就能全螢幕手寫，寫完可用 AI 協助判讀，也可切換成人工檢查。</p>
+      </div>
+      <div class="hero-actions">
+        <button id="ai-settings-button" class="secondary-button" type="button">AI 設定</button>
+        <button id="mode-button" class="secondary-button" type="button">切換人工檢查</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <aside class="lesson-panel">
+        <div class="panel-heading">
+          <h2>課程</h2>
+          <p id="mode-indicator">目前模式：AI 判讀</p>
+        </div>
+        <div id="lesson-list" class="lesson-list" aria-label="課程列表"></div>
+      </aside>
+
+      <section class="quiz-panel">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">作答區</p>
+            <h2 id="lesson-title">請先選擇課程</h2>
+          </div>
+          <div class="score-card">
+            <span id="score-label">0 / 0</span>
+            <span id="score-subtitle">已完成</span>
+          </div>
+        </div>
+
+        <p id="lesson-description" class="lesson-description">題目會把生字挖空，點擊空格後即可進入手寫作答。</p>
+        <div id="question-list" class="question-list"></div>
+      </section>
+    </main>
+  </div>
+
+  <div id="handwriting-dialog" class="modal" hidden>
+    <div class="modal-card modal-card--fullscreen">
+      <div class="modal-header">
+        <div>
+          <p class="eyebrow">手寫作答</p>
+          <h2 id="dialog-title">請寫字</h2>
+        </div>
+        <button id="close-handwriting-button" class="icon-button" type="button" aria-label="關閉">×</button>
+      </div>
+
+      <p id="dialog-prompt" class="dialog-prompt"></p>
+
+      <div class="canvas-wrap">
+        <canvas id="handwriting-canvas" width="900" height="900" aria-label="手寫畫布"></canvas>
+      </div>
+
+      <label class="assist-field" for="fallback-input">
+        AI 沒有判出來時，可補打一個字或詞
+        <input id="fallback-input" type="text" maxlength="8" autocomplete="off" placeholder="例如：晨">
+      </label>
+
+      <div class="modal-actions">
+        <button id="clear-canvas-button" class="secondary-button" type="button">清除重寫</button>
+        <button id="submit-answer-button" class="primary-button" type="button">送出答案</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="ai-settings-dialog" class="modal" hidden>
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <p class="eyebrow">AI 判讀設定</p>
+          <h2>視覺模型 API</h2>
+        </div>
+        <button id="close-ai-settings-button" class="icon-button" type="button" aria-label="關閉">×</button>
+      </div>
+
+      <p class="settings-copy">可填入支援圖片理解的 OpenAI 相容 API。資料只會存在這台裝置的瀏覽器。</p>
+
+      <label class="field" for="api-endpoint-input">
+        API 端點
+        <input id="api-endpoint-input" type="url" placeholder="https://api.openai.com/v1/chat/completions">
+      </label>
+
+      <label class="field" for="api-key-input">
+        API Key
+        <input id="api-key-input" type="password" placeholder="sk-...">
+      </label>
+
+      <label class="field" for="api-model-input">
+        模型名稱
+        <input id="api-model-input" type="text" placeholder="gpt-4.1-mini">
+      </label>
+
+      <div class="modal-actions">
+        <button id="clear-ai-settings-button" class="secondary-button" type="button">清除設定</button>
+        <button id="save-ai-settings-button" class="primary-button" type="button">儲存設定</button>
+      </div>
+    </div>
+  </div>
+
+  <template id="question-template">
+    <article class="question-card">
+      <header class="question-header">
+        <span class="question-index"></span>
+        <span class="question-status">尚未作答</span>
+      </header>
+      <p class="question-text"></p>
+      <div class="question-actions">
+        <button class="blank-button" type="button"></button>
+        <button class="ghost-button show-answer-button" type="button">顯示答案</button>
+      </div>
+      <p class="question-feedback"></p>
+    </article>
+  </template>
+
+  <script src="./lessons.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
