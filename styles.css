@@ -212,11 +212,48 @@ button {
   margin-bottom: 16px;
 }
 
+.canvas-grid {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 10px;
+}
+
+.canvas-cell {
+  display: grid;
+  gap: 8px;
+}
+
+.canvas-label {
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.canvas-help {
+  margin: 0 0 12px;
+  color: var(--muted);
+}
+
 #handwriting-canvas {
   width: 100%;
   height: min(52vh, 520px);
   display: block;
   border-radius: 12px;
+  background:
+    linear-gradient(rgba(31, 122, 140, 0.12) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(31, 122, 140, 0.12) 1px, transparent 1px),
+    linear-gradient(45deg, transparent calc(50% - 0.5px), rgba(31, 122, 140, 0.16) calc(50% - 0.5px), rgba(31, 122, 140, 0.16) calc(50% + 0.5px), transparent calc(50% + 0.5px)),
+    linear-gradient(-45deg, transparent calc(50% - 0.5px), rgba(31, 122, 140, 0.16) calc(50% - 0.5px), rgba(31, 122, 140, 0.16) calc(50% + 0.5px), transparent calc(50% + 0.5px)),
+    white;
+  background-size: 25% 25%, 25% 25%, 100% 100%, 100% 100%, auto;
+  touch-action: none;
+}
+
+.char-canvas {
+  width: 100%;
+  height: min(34vh, 320px);
+  display: block;
+  border-radius: 12px;
+  border: 1px solid var(--line);
   background:
     linear-gradient(rgba(31, 122, 140, 0.12) 1px, transparent 1px),
     linear-gradient(90deg, rgba(31, 122, 140, 0.12) 1px, transparent 1px),
@@ -321,9 +358,14 @@ button {
   margin: 0 0 8px;
 }
 
+.compare-canvas-list {
+  display: grid;
+  gap: 10px;
+}
+
 .compare-canvas {
   width: 100%;
-  max-height: 260px;
+  max-height: 220px;
   display: block;
   border-radius: 12px;
   background: white;
@@ -352,6 +394,10 @@ button {
   .compare-panel {
     grid-template-columns: 1.2fr 0.8fr;
   }
+
+  .canvas-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 919px) {
@@ -362,5 +408,9 @@ button {
 
   #handwriting-canvas {
     height: min(46vh, 420px);
+  }
+
+  .char-canvas {
+    height: min(28vh, 260px);
   }
 }

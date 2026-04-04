@@ -48,7 +48,9 @@
             <span id="question-hint" class="stage-hint"></span>
           </div>
           <p id="question-sentence" class="stage-sentence"></p>
-          <div class="canvas-wrap canvas-wrap--inline">
+          <div id="canvas-grid" class="canvas-grid"></div>
+          <div class="canvas-help">每個字各寫在一個格子裡。</div>
+          <div class="canvas-wrap canvas-wrap--inline" hidden>
             <canvas id="handwriting-canvas" width="900" height="900" aria-label="手寫畫布"></canvas>
           </div>
           <div class="stage-actions">
@@ -94,7 +96,7 @@
       <div class="compare-panel">
         <div class="compare-box">
           <p class="compare-label">手寫內容</p>
-          <canvas class="compare-canvas" width="600" height="400" aria-label="手寫答案"></canvas>
+          <div class="compare-canvas-list"></div>
         </div>
         <div class="compare-box">
           <p class="compare-label">正確答案</p>
