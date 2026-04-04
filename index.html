@@ -12,7 +12,7 @@
       <div class="hero-copy">
         <p class="eyebrow">國小三下國語</p>
         <h1>生字出題器</h1>
-        <p class="hero-text">選課後直接在手機上作答，點空格就能全螢幕手寫；每題都附注音提示，寫完後再用人工方式核對答案。</p>
+        <p class="hero-text">每次只做一題，寫完就直接跳下一題；全部完成後再集中檢查所有答案。</p>
       </div>
     </header>
 
@@ -33,77 +33,65 @@
           </div>
           <div class="score-card">
             <span id="score-label">0 / 0</span>
-            <span id="score-subtitle">已完成</span>
+            <span id="score-subtitle">進度</span>
           </div>
         </div>
 
-        <p id="lesson-description" class="lesson-description">題目會把生字挖空，點擊空格後即可進入手寫作答。</p>
-        <div id="question-list" class="question-list"></div>
+        <p id="lesson-description" class="lesson-description">選課後會從第一題開始作答。</p>
+        <div class="inline-tools">
+          <button id="bank-button" class="secondary-button" type="button">檢視本課題庫</button>
+        </div>
+
+        <section id="question-stage" class="stage-card" hidden>
+          <div class="stage-top">
+            <span id="question-progress" class="stage-progress"></span>
+            <span id="question-hint" class="stage-hint"></span>
+          </div>
+          <p id="question-sentence" class="stage-sentence"></p>
+          <div class="canvas-wrap canvas-wrap--inline">
+            <canvas id="handwriting-canvas" width="900" height="900" aria-label="手寫畫布"></canvas>
+          </div>
+          <div class="stage-actions">
+            <button id="clear-canvas-button" class="secondary-button" type="button">清除重寫</button>
+            <button id="submit-answer-button" class="primary-button" type="button">送出這一題</button>
+          </div>
+        </section>
+
+        <section id="review-stage" class="review-stage" hidden>
+          <div class="review-header">
+            <div>
+              <p class="eyebrow">全部完成</p>
+              <h2>答案檢查</h2>
+            </div>
+            <button id="restart-button" class="secondary-button" type="button">重新練習本課</button>
+          </div>
+          <div id="review-list" class="review-list"></div>
+        </section>
       </section>
     </main>
   </div>
 
-  <div id="handwriting-dialog" class="modal" hidden>
-    <div class="modal-card modal-card--fullscreen">
-      <div class="modal-header">
+  <div id="bank-dialog" class="overlay-sheet" hidden>
+    <div class="sheet-card">
+      <div class="sheet-header">
         <div>
-          <p class="eyebrow">手寫作答</p>
-          <h2 id="dialog-title">請寫字</h2>
+          <p class="eyebrow">題庫內容</p>
+          <h2 id="bank-title">本課題庫</h2>
         </div>
-        <button id="close-handwriting-button" class="icon-button" type="button" aria-label="關閉">×</button>
+        <button id="close-bank-button" class="secondary-button" type="button">關閉</button>
       </div>
-
-      <p id="dialog-prompt" class="dialog-prompt"></p>
-
-      <div class="canvas-wrap">
-        <canvas id="handwriting-canvas" width="900" height="900" aria-label="手寫畫布"></canvas>
-      </div>
-
-      <div class="modal-actions">
-        <button id="clear-canvas-button" class="secondary-button" type="button">清除重寫</button>
-        <button id="submit-answer-button" class="primary-button" type="button">送出答案</button>
-      </div>
+      <div id="bank-list" class="bank-list"></div>
     </div>
   </div>
 
-  <div id="preview-dialog" class="modal" hidden>
-    <div class="modal-card modal-card--preview">
-      <div class="modal-header">
-        <div>
-          <p class="eyebrow">作答對照</p>
-          <h2>手寫答案</h2>
-        </div>
-        <button id="close-preview-button" class="icon-button" type="button" aria-label="關閉">×</button>
-      </div>
-
-      <div class="compare-grid">
-        <div class="compare-box">
-          <p class="compare-label">手寫內容</p>
-          <canvas id="preview-canvas" class="preview-canvas" width="600" height="400" aria-label="手寫答案預覽"></canvas>
-        </div>
-        <div class="compare-box">
-          <p class="compare-label">正確答案</p>
-          <p id="preview-answer" class="preview-answer"></p>
-          <p id="preview-hint" class="preview-hint"></p>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <template id="question-template">
-    <article class="question-card">
-      <header class="question-header">
-        <span class="question-index"></span>
-        <span class="question-status">尚未作答</span>
+  <template id="review-template">
+    <article class="review-card">
+      <header class="review-card-header">
+        <span class="review-index"></span>
+        <span class="review-result">人工核對</span>
       </header>
-      <p class="question-text"></p>
-      <p class="question-hint"></p>
-      <div class="question-actions">
-        <button class="blank-button" type="button"></button>
-        <button class="ghost-button show-answer-button" type="button">顯示答案</button>
-      </div>
-      <p class="question-feedback"></p>
-      <div class="compare-panel" hidden>
+      <p class="review-sentence"></p>
+      <div class="compare-panel">
         <div class="compare-box">
           <p class="compare-label">手寫內容</p>
           <canvas class="compare-canvas" width="600" height="400" aria-label="手寫答案"></canvas>
