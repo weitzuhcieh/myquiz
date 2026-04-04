@@ -1,9 +1,4 @@
 (function () {
-  const STORAGE_KEYS = {
-    ai: "character-quiz-ai-settings",
-    mode: "character-quiz-check-mode"
-  };
-
   const state = {
     lessons: window.LESSONS.map((lesson) => ({
       ...lesson,
@@ -18,9 +13,7 @@
       }))
     })),
     currentLessonId: window.LESSONS[0] ? window.LESSONS[0].id : null,
-    currentItemId: null,
-    checkMode: localStorage.getItem(STORAGE_KEYS.mode) || "ai",
-    aiSettings: loadAiSettings()
+    currentItemId: null
   };
 
   const lessonList = document.getElementById("lesson-list");
@@ -28,17 +21,10 @@
   const lessonDescription = document.getElementById("lesson-description");
   const questionList = document.getElementById("question-list");
   const scoreLabel = document.getElementById("score-label");
-  const modeIndicator = document.getElementById("mode-indicator");
-  const modeButton = document.getElementById("mode-button");
-  const aiSettingsButton = document.getElementById("ai-settings-button");
-  const aiSettingsDialog = document.getElementById("ai-settings-dialog");
   const handwritingDialog = document.getElementById("handwriting-dialog");
   const dialogTitle = document.getElementById("dialog-title");
   const dialogPrompt = document.getElementById("dialog-prompt");
   const fallbackInput = document.getElementById("fallback-input");
-  const apiEndpointInput = document.getElementById("api-endpoint-input");
-  const apiKeyInput = document.getElementById("api-key-input");
-  const apiModelInput = document.getElementById("api-model-input");
   const questionTemplate = document.getElementById("question-template");
   const canvas = document.getElementById("handwriting-canvas");
   const canvasContext = canvas.getContext("2d");
@@ -51,12 +37,7 @@
   render();
 
   function bindEvents() {
-    modeButton.addEventListener("click", toggleMode);
-    aiSettingsButton.addEventListener("click", openAiSettings);
-    document.getElementById("close-ai-settings-button").addEventListener("click", closeAiSettings);
     document.getElementById("close-handwriting-button").addEventListener("click", closeHandwritingDialog);
-    document.getElementById("save-ai-settings-button").addEventListener("click", saveAiSettings);
-    document.getElementById("clear-ai-settings-button").addEventListener("click", clearAiSettings);
     document.getElementById("clear-canvas-button").addEventListener("click", clearCanvas);
     document.getElementById("submit-answer-button").addEventListener("click", submitHandwriting);
   }
@@ -64,7 +45,6 @@
   function render() {
     renderLessonList();
     renderLesson();
-    updateModeText();
   }
 
   function renderLessonList() {
@@ -106,12 +86,14 @@
       const indexEl = fragment.querySelector(".question-index");
       const statusEl = fragment.querySelector(".question-status");
       const textEl = fragment.querySelector(".question-text");
+      const hintEl = fragment.querySelector(".question-hint");
       const blankButton = fragment.querySelector(".blank-button");
       const showAnswerButton = fragment.querySelector(".show-answer-button");
       const feedbackEl = fragment.querySelector(".question-feedback");
 
       indexEl.textContent = `第 ${index + 1} 題`;
       textEl.innerHTML = buildSentenceMarkup(item);
+      hintEl.textContent = `注音提示：${item.hint || "無"}`;
 
       const displayText = item.userAnswer || "點我手寫";
       blankButton.textContent = displayText;
@@ -126,31 +108,27 @@
         feedbackEl.textContent = `正確答案：${item.answer}`;
       } else if (item.isCorrect === true) {
         card.classList.add("is-correct");
-        statusEl.textContent = "答對了";
-        feedbackEl.textContent = item.feedback || `辨識結果：${item.recognizedText || item.userAnswer}`;
+        statusEl.textContent = "已作答";
+        feedbackEl.textContent = item.feedback || `你填入的是：${item.userAnswer}`;
       } else if (item.isCorrect === false) {
         card.classList.add("is-incorrect");
-        statusEl.textContent = "再試一次";
-        feedbackEl.textContent = item.feedback || `辨識結果：${item.recognizedText || item.userAnswer}，正確答案是 ${item.answer}`;
+        statusEl.textContent = "已作答";
+        feedbackEl.textContent = item.feedback || `你填入的是：${item.userAnswer}`;
       }
 
       questionList.appendChild(fragment);
     });
   }
 
-  function updateModeText() {
-    const modeText = state.checkMode === "ai" ? "目前模式：AI 判讀" : "目前模式：人工檢查";
-    modeIndicator.textContent = modeText;
-    modeButton.textContent = state.checkMode === "ai" ? "切換人工檢查" : "切換 AI 判讀";
-  }
-
   function buildSentenceMarkup(item) {
     const safeText = escapeHtml(item.text);
     const safeAnswer = escapeHtml(item.answer);
-    const replacement = `<span class="blank-inline">${item.userAnswer ? escapeHtml(item.userAnswer) : "＿＿"}</span>`;
+    const hint = escapeHtml(item.hint || "");
+    const blankText = item.userAnswer ? escapeHtml(item.userAnswer) : "＿＿";
+    const replacement = `<span class="blank-inline blank-ruby"><ruby>${blankText}<rt>${hint}</rt></ruby></span>`;
     return safeText.includes(safeAnswer)
       ? safeText.replace(safeAnswer, replacement)
-      : `${safeText} <span class="blank-inline">${item.userAnswer ? escapeHtml(item.userAnswer) : "＿＿"}</span>`;
+      : `${safeText} ${replacement}`;
   }
 
   function openHandwritingDialog(item) {
@@ -185,95 +163,13 @@
     }
 
     const fallbackText = fallbackInput.value.trim();
-    const imageDataUrl = canvas.toDataURL("image/png");
-    let result;
-
-    if (state.checkMode === "ai" && hasAiSettings()) {
-      try {
-        setSubmittingState(true);
-        result = await checkAnswerWithAi(item.answer, imageDataUrl, fallbackText);
-      } catch (error) {
-        result = {
-          recognizedText: fallbackText,
-          isCorrect: fallbackText === item.answer,
-          feedback: "AI 判讀失敗，已改用補打文字比對。"
-        };
-      } finally {
-        setSubmittingState(false);
-      }
-    } else {
-      result = {
-        recognizedText: fallbackText || "未提供補打文字",
-        isCorrect: fallbackText === item.answer,
-        feedback: fallbackText
-          ? `已用補打文字比對。${fallbackText === item.answer ? "答案正確。" : `正確答案是 ${item.answer}。`}`
-          : "目前是人工檢查模式，請搭配顯示答案確認。"
-      };
-    }
-
-    item.userAnswer = result.recognizedText || fallbackText || "手寫作答";
-    item.recognizedText = result.recognizedText || "";
-    item.isCorrect = Boolean(result.isCorrect);
-    item.feedback = result.feedback || "";
+    item.userAnswer = fallbackText || "已手寫作答";
+    item.recognizedText = "";
+    item.isCorrect = true;
+    item.feedback = "已記錄作答，請按「顯示答案」人工核對。";
     item.isRevealed = false;
     closeHandwritingDialog();
     renderLesson();
-  }
-
-  function setSubmittingState(isSubmitting) {
-    const button = document.getElementById("submit-answer-button");
-    button.disabled = isSubmitting;
-    button.textContent = isSubmitting ? "AI 判讀中..." : "送出答案";
-  }
-
-  async function checkAnswerWithAi(expectedAnswer, imageDataUrl, fallbackText) {
-    const response = await fetch(state.aiSettings.endpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${state.aiSettings.apiKey}`
-      },
-      body: JSON.stringify({
-        model: state.aiSettings.model,
-        temperature: 0,
-        response_format: { type: "json_object" },
-        messages: [
-          {
-            role: "system",
-            content: "你是國語生字批改助理。請辨識單一手寫中文答案，並和 expectedAnswer 比對。只回傳 JSON：recognizedText、isCorrect、feedback。feedback 使用繁體中文，簡短即可。"
-          },
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: `expectedAnswer: ${expectedAnswer}\nfallbackText: ${fallbackText || "無"}\n請只根據手寫圖片辨識；如果看不清楚，可參考 fallbackText。`
-              },
-              {
-                type: "image_url",
-                image_url: {
-                  url: imageDataUrl
-                }
-              }
-            ]
-          }
-        ]
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-
-    const payload = await response.json();
-    const content = payload.choices?.[0]?.message?.content;
-    const parsed = typeof content === "string" ? JSON.parse(content) : content;
-
-    return {
-      recognizedText: parsed.recognizedText || fallbackText || "",
-      isCorrect: Boolean(parsed.isCorrect),
-      feedback: parsed.feedback || ""
-    };
   }
 
   function setupCanvas() {
@@ -337,57 +233,8 @@
     hasInk = false;
   }
 
-  function toggleMode() {
-    state.checkMode = state.checkMode === "ai" ? "manual" : "ai";
-    localStorage.setItem(STORAGE_KEYS.mode, state.checkMode);
-    render();
-  }
-
-  function openAiSettings() {
-    apiEndpointInput.value = state.aiSettings.endpoint;
-    apiKeyInput.value = state.aiSettings.apiKey;
-    apiModelInput.value = state.aiSettings.model;
-    aiSettingsDialog.hidden = false;
-  }
-
-  function closeAiSettings() {
-    aiSettingsDialog.hidden = true;
-  }
-
   function closeHandwritingDialog() {
     handwritingDialog.hidden = true;
-  }
-
-  function saveAiSettings() {
-    state.aiSettings = {
-      endpoint: apiEndpointInput.value.trim(),
-      apiKey: apiKeyInput.value.trim(),
-      model: apiModelInput.value.trim()
-    };
-    localStorage.setItem(STORAGE_KEYS.ai, JSON.stringify(state.aiSettings));
-    closeAiSettings();
-    render();
-  }
-
-  function clearAiSettings() {
-    state.aiSettings = { endpoint: "", apiKey: "", model: "" };
-    localStorage.removeItem(STORAGE_KEYS.ai);
-    apiEndpointInput.value = "";
-    apiKeyInput.value = "";
-    apiModelInput.value = "";
-    render();
-  }
-
-  function loadAiSettings() {
-    try {
-      return JSON.parse(localStorage.getItem(STORAGE_KEYS.ai)) || { endpoint: "", apiKey: "", model: "" };
-    } catch (error) {
-      return { endpoint: "", apiKey: "", model: "" };
-    }
-  }
-
-  function hasAiSettings() {
-    return Boolean(state.aiSettings.endpoint && state.aiSettings.apiKey && state.aiSettings.model);
   }
 
   function getCurrentLesson() {

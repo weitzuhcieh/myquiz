@@ -12,11 +12,7 @@
       <div class="hero-copy">
         <p class="eyebrow">國小三下國語</p>
         <h1>生字出題器</h1>
-        <p class="hero-text">選課後直接在手機上作答，點空格就能全螢幕手寫，寫完可用 AI 協助判讀，也可切換成人工檢查。</p>
-      </div>
-      <div class="hero-actions">
-        <button id="ai-settings-button" class="secondary-button" type="button">AI 設定</button>
-        <button id="mode-button" class="secondary-button" type="button">切換人工檢查</button>
+        <p class="hero-text">選課後直接在手機上作答，點空格就能全螢幕手寫；每題都附注音提示，寫完後再用人工方式核對答案。</p>
       </div>
     </header>
 
@@ -24,7 +20,7 @@
       <aside class="lesson-panel">
         <div class="panel-heading">
           <h2>課程</h2>
-          <p id="mode-indicator">目前模式：AI 判讀</p>
+          <p id="mode-indicator">目前模式：人工判讀</p>
         </div>
         <div id="lesson-list" class="lesson-list" aria-label="課程列表"></div>
       </aside>
@@ -75,40 +71,6 @@
     </div>
   </div>
 
-  <div id="ai-settings-dialog" class="modal" hidden>
-    <div class="modal-card">
-      <div class="modal-header">
-        <div>
-          <p class="eyebrow">AI 判讀設定</p>
-          <h2>視覺模型 API</h2>
-        </div>
-        <button id="close-ai-settings-button" class="icon-button" type="button" aria-label="關閉">×</button>
-      </div>
-
-      <p class="settings-copy">可填入支援圖片理解的 OpenAI 相容 API。資料只會存在這台裝置的瀏覽器。</p>
-
-      <label class="field" for="api-endpoint-input">
-        API 端點
-        <input id="api-endpoint-input" type="url" placeholder="https://api.openai.com/v1/chat/completions">
-      </label>
-
-      <label class="field" for="api-key-input">
-        API Key
-        <input id="api-key-input" type="password" placeholder="sk-...">
-      </label>
-
-      <label class="field" for="api-model-input">
-        模型名稱
-        <input id="api-model-input" type="text" placeholder="gpt-4.1-mini">
-      </label>
-
-      <div class="modal-actions">
-        <button id="clear-ai-settings-button" class="secondary-button" type="button">清除設定</button>
-        <button id="save-ai-settings-button" class="primary-button" type="button">儲存設定</button>
-      </div>
-    </div>
-  </div>
-
   <template id="question-template">
     <article class="question-card">
       <header class="question-header">
@@ -116,6 +78,7 @@
         <span class="question-status">尚未作答</span>
       </header>
       <p class="question-text"></p>
+      <p class="question-hint"></p>
       <div class="question-actions">
         <button class="blank-button" type="button"></button>
         <button class="ghost-button show-answer-button" type="button">顯示答案</button>

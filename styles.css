@@ -79,7 +79,6 @@ input {
   line-height: 1.7;
 }
 
-.hero-actions,
 .modal-actions,
 .question-actions {
   display: flex;
@@ -191,15 +190,30 @@ input {
   font-size: clamp(1.08rem, 4vw, 1.34rem);
 }
 
+.question-hint {
+  margin: -8px 0 16px;
+  color: var(--accent-strong);
+  font-size: 0.98rem;
+}
+
 .blank-inline {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  display: inline-grid;
+  place-items: center;
   min-width: 3.2em;
   padding: 0 0.2em 0.04em;
   border-bottom: 3px solid rgba(31, 122, 140, 0.35);
   color: var(--accent-strong);
   font-weight: 700;
+}
+
+.blank-ruby ruby {
+  ruby-position: over;
+}
+
+.blank-ruby rt {
+  font-size: 0.62em;
+  color: var(--muted);
+  letter-spacing: 0.04em;
 }
 
 .blank-button,
