@@ -265,6 +265,7 @@ input {
   justify-content: center;
   padding: 12px;
   background: rgba(23, 17, 12, 0.45);
+  overflow-y: auto;
 }
 
 .modal[hidden] {
@@ -284,7 +285,8 @@ input {
 
 .modal-card--fullscreen {
   width: min(100vw - 12px, 900px);
-  min-height: min(100vh - 12px, 920px);
+  max-height: calc(100vh - 24px);
+  overflow-y: auto;
 }
 
 .modal-header {
@@ -306,6 +308,7 @@ input {
   background: white;
   border-radius: var(--radius-md);
   border: 1px solid var(--line);
+  flex-shrink: 0;
 }
 
 #handwriting-canvas {
@@ -327,6 +330,10 @@ input {
   display: grid;
   gap: 8px;
   color: var(--muted);
+}
+
+.assist-field {
+  flex-shrink: 0;
 }
 
 .field input,
@@ -374,5 +381,9 @@ input {
 
   .question-text {
     font-size: 1.12rem;
+  }
+
+  .modal-card--fullscreen {
+    padding-bottom: 16px;
   }
 }
