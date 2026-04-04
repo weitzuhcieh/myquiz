@@ -1,40 +1,56 @@
 (function () {
-  const state = {
-    lessons: window.LESSONS.map((lesson) => ({
-      ...lesson,
-      items: lesson.items.map((item, index) => ({
-        ...item,
-        id: `${lesson.id}-${index + 1}`,
-        userAnswer: "",
-        recognizedText: "",
-        isCorrect: null,
-        isRevealed: false,
-        feedback: ""
-      }))
-    })),
-    currentLessonId: window.LESSONS[0] ? window.LESSONS[0].id : null,
+  var state = {
+    lessons: [],
+    currentLessonId: null,
     currentItemId: null
   };
 
-  const lessonList = document.getElementById("lesson-list");
-  const lessonTitle = document.getElementById("lesson-title");
-  const lessonDescription = document.getElementById("lesson-description");
-  const questionList = document.getElementById("question-list");
-  const scoreLabel = document.getElementById("score-label");
-  const handwritingDialog = document.getElementById("handwriting-dialog");
-  const dialogTitle = document.getElementById("dialog-title");
-  const dialogPrompt = document.getElementById("dialog-prompt");
-  const fallbackInput = document.getElementById("fallback-input");
-  const questionTemplate = document.getElementById("question-template");
-  const canvas = document.getElementById("handwriting-canvas");
-  const canvasContext = canvas.getContext("2d");
+  var lessonList = document.getElementById("lesson-list");
+  var lessonTitle = document.getElementById("lesson-title");
+  var lessonDescription = document.getElementById("lesson-description");
+  var questionList = document.getElementById("question-list");
+  var scoreLabel = document.getElementById("score-label");
+  var handwritingDialog = document.getElementById("handwriting-dialog");
+  var dialogTitle = document.getElementById("dialog-title");
+  var dialogPrompt = document.getElementById("dialog-prompt");
+  var fallbackInput = document.getElementById("fallback-input");
+  var questionTemplate = document.getElementById("question-template");
+  var canvas = document.getElementById("handwriting-canvas");
+  var canvasContext = canvas ? canvas.getContext("2d") : null;
 
-  let drawing = false;
-  let hasInk = false;
+  var drawing = false;
+  var hasInk = false;
 
+  initializeState();
   setupCanvas();
   bindEvents();
   render();
+
+  function initializeState() {
+    var sourceLessons = window.LESSONS || [];
+    state.lessons = sourceLessons.map(function (lesson) {
+      return {
+        id: lesson.id,
+        name: lesson.name,
+        description: lesson.description,
+        items: lesson.items.map(function (item, index) {
+          return {
+            id: lesson.id + "-" + (index + 1),
+            text: item.text,
+            answer: item.answer,
+            hint: item.hint || "",
+            userAnswer: "",
+            recognizedText: "",
+            isCorrect: null,
+            isRevealed: false,
+            feedback: ""
+          };
+        })
+      };
+    });
+
+    state.currentLessonId = state.lessons.length ? state.lessons[0].id : null;
+  }
 
   function bindEvents() {
     document.getElementById("close-handwriting-button").addEventListener("click", closeHandwritingDialog);
@@ -50,12 +66,12 @@
   function renderLessonList() {
     lessonList.innerHTML = "";
 
-    state.lessons.forEach((lesson) => {
-      const button = document.createElement("button");
-      button.className = `lesson-button${lesson.id === state.currentLessonId ? " is-active" : ""}`;
+    state.lessons.forEach(function (lesson) {
+      var button = document.createElement("button");
+      button.className = "lesson-button" + (lesson.id === state.currentLessonId ? " is-active" : "");
       button.type = "button";
-      button.innerHTML = `<strong>${lesson.name}</strong><span>${lesson.items.length} 題</span>`;
-      button.addEventListener("click", () => {
+      button.innerHTML = "<strong>" + escapeHtml(lesson.name) + "</strong><span>" + lesson.items.length + " 題</span>";
+      button.addEventListener("click", function () {
         state.currentLessonId = lesson.id;
         render();
       });
@@ -64,10 +80,10 @@
   }
 
   function renderLesson() {
-    const lesson = getCurrentLesson();
+    var lesson = getCurrentLesson();
     if (!lesson) {
-      lessonTitle.textContent = "找不到課程";
-      lessonDescription.textContent = "";
+      lessonTitle.textContent = "請先選擇課程";
+      lessonDescription.textContent = "題目會把生字挖空，點擊空格後即可進入手寫作答。";
       questionList.innerHTML = "";
       scoreLabel.textContent = "0 / 0";
       return;
@@ -77,43 +93,45 @@
     lessonDescription.textContent = lesson.description;
     questionList.innerHTML = "";
 
-    const completedCount = lesson.items.filter((item) => item.isCorrect !== null || item.isRevealed).length;
-    scoreLabel.textContent = `${completedCount} / ${lesson.items.length}`;
+    var completedCount = lesson.items.filter(function (item) {
+      return item.isCorrect !== null || item.isRevealed;
+    }).length;
 
-    lesson.items.forEach((item, index) => {
-      const fragment = questionTemplate.content.cloneNode(true);
-      const card = fragment.querySelector(".question-card");
-      const indexEl = fragment.querySelector(".question-index");
-      const statusEl = fragment.querySelector(".question-status");
-      const textEl = fragment.querySelector(".question-text");
-      const hintEl = fragment.querySelector(".question-hint");
-      const blankButton = fragment.querySelector(".blank-button");
-      const showAnswerButton = fragment.querySelector(".show-answer-button");
-      const feedbackEl = fragment.querySelector(".question-feedback");
+    scoreLabel.textContent = completedCount + " / " + lesson.items.length;
 
-      indexEl.textContent = `第 ${index + 1} 題`;
+    lesson.items.forEach(function (item, index) {
+      var fragment = questionTemplate.content.cloneNode(true);
+      var card = fragment.querySelector(".question-card");
+      var indexEl = fragment.querySelector(".question-index");
+      var statusEl = fragment.querySelector(".question-status");
+      var textEl = fragment.querySelector(".question-text");
+      var hintEl = fragment.querySelector(".question-hint");
+      var blankButton = fragment.querySelector(".blank-button");
+      var showAnswerButton = fragment.querySelector(".show-answer-button");
+      var feedbackEl = fragment.querySelector(".question-feedback");
+
+      indexEl.textContent = "第 " + (index + 1) + " 題";
       textEl.innerHTML = buildSentenceMarkup(item);
-      hintEl.textContent = `注音提示：${item.hint || "無"}`;
+      hintEl.textContent = "注音提示：" + (item.hint || "無");
 
-      const displayText = item.userAnswer || "點我手寫";
-      blankButton.textContent = displayText;
-      blankButton.classList.toggle("is-filled", Boolean(item.userAnswer));
-      blankButton.addEventListener("click", () => openHandwritingDialog(item));
+      blankButton.textContent = item.userAnswer || "點我手寫";
+      blankButton.classList.toggle("is-filled", !!item.userAnswer);
+      blankButton.addEventListener("click", function () {
+        openHandwritingDialog(item);
+      });
 
-      showAnswerButton.addEventListener("click", () => revealAnswer(item.id));
+      showAnswerButton.addEventListener("click", function () {
+        revealAnswer(item.id);
+      });
 
       if (item.isRevealed) {
         card.classList.add("is-revealed");
         statusEl.textContent = "已顯示答案";
-        feedbackEl.textContent = `正確答案：${item.answer}`;
+        feedbackEl.textContent = "正確答案：" + item.answer;
       } else if (item.isCorrect === true) {
         card.classList.add("is-correct");
         statusEl.textContent = "已作答";
-        feedbackEl.textContent = item.feedback || `你填入的是：${item.userAnswer}`;
-      } else if (item.isCorrect === false) {
-        card.classList.add("is-incorrect");
-        statusEl.textContent = "已作答";
-        feedbackEl.textContent = item.feedback || `你填入的是：${item.userAnswer}`;
+        feedbackEl.textContent = item.feedback || ("你填入的是：" + item.userAnswer);
       }
 
       questionList.appendChild(fragment);
@@ -121,37 +139,48 @@
   }
 
   function buildSentenceMarkup(item) {
-    const safeText = escapeHtml(item.text);
-    const safeAnswer = escapeHtml(item.answer);
-    const hint = escapeHtml(item.hint || "");
-    const blankText = item.userAnswer ? escapeHtml(item.userAnswer) : "＿＿";
-    const replacement = `<span class="blank-inline blank-ruby"><ruby>${blankText}<rt>${hint}</rt></ruby></span>`;
-    return safeText.includes(safeAnswer)
-      ? safeText.replace(safeAnswer, replacement)
-      : `${safeText} ${replacement}`;
+    var safeText = escapeHtml(item.text);
+    var safeAnswer = escapeHtml(item.answer);
+    var hint = escapeHtml(item.hint || "");
+    var blankText = item.userAnswer ? escapeHtml(item.userAnswer) : "＿＿";
+    var replacement = '<span class="blank-inline blank-ruby"><ruby>' + blankText + "<rt>" + hint + "</rt></ruby></span>";
+
+    if (safeText.indexOf(safeAnswer) >= 0) {
+      return safeText.replace(safeAnswer, replacement);
+    }
+
+    return safeText + " " + replacement;
   }
 
   function openHandwritingDialog(item) {
     state.currentItemId = item.id;
-    dialogTitle.textContent = `請寫出：${item.answer}`;
+    dialogTitle.textContent = "請寫出：" + item.answer;
     dialogPrompt.textContent = item.text;
     fallbackInput.value = item.userAnswer || "";
     clearCanvas();
     handwritingDialog.hidden = false;
   }
 
+  function closeHandwritingDialog() {
+    handwritingDialog.hidden = true;
+  }
+
   function revealAnswer(itemId) {
-    const item = findItemById(itemId);
+    var item = findItemById(itemId);
+    if (!item) {
+      return;
+    }
+
     item.isRevealed = true;
     item.userAnswer = item.answer;
     item.recognizedText = item.answer;
     item.isCorrect = true;
-    item.feedback = `這題答案是 ${item.answer}`;
+    item.feedback = "這題答案是 " + item.answer;
     renderLesson();
   }
 
-  async function submitHandwriting() {
-    const item = findItemById(state.currentItemId);
+  function submitHandwriting() {
+    var item = findItemById(state.currentItemId);
     if (!item) {
       return;
     }
@@ -162,7 +191,7 @@
       return;
     }
 
-    const fallbackText = fallbackInput.value.trim();
+    var fallbackText = fallbackInput.value.trim();
     item.userAnswer = fallbackText || "已手寫作答";
     item.recognizedText = "";
     item.isCorrect = true;
@@ -173,43 +202,57 @@
   }
 
   function setupCanvas() {
+    if (!canvas || !canvasContext) {
+      return;
+    }
+
     clearCanvas();
 
-    const getPoint = (event) => {
-      const rect = canvas.getBoundingClientRect();
-      const source = event.touches?.[0] || event;
-      const scaleX = canvas.width / rect.width;
-      const scaleY = canvas.height / rect.height;
+    function getPoint(event) {
+      var rect = canvas.getBoundingClientRect();
+      var source = event;
+      if (event.touches && event.touches.length) {
+        source = event.touches[0];
+      }
+
+      var scaleX = canvas.width / rect.width;
+      var scaleY = canvas.height / rect.height;
       return {
         x: (source.clientX - rect.left) * scaleX,
         y: (source.clientY - rect.top) * scaleY
       };
-    };
+    }
 
-    const startStroke = (event) => {
-      event.preventDefault();
+    function startStroke(event) {
+      if (event.preventDefault) {
+        event.preventDefault();
+      }
+
       drawing = true;
       hasInk = true;
-      const point = getPoint(event);
+      var point = getPoint(event);
       canvasContext.beginPath();
       canvasContext.moveTo(point.x, point.y);
-    };
+    }
 
-    const moveStroke = (event) => {
+    function moveStroke(event) {
       if (!drawing) {
         return;
       }
 
-      event.preventDefault();
-      const point = getPoint(event);
+      if (event.preventDefault) {
+        event.preventDefault();
+      }
+
+      var point = getPoint(event);
       canvasContext.lineTo(point.x, point.y);
       canvasContext.stroke();
-    };
+    }
 
-    const endStroke = () => {
+    function endStroke() {
       drawing = false;
       canvasContext.closePath();
-    };
+    }
 
     canvas.addEventListener("pointerdown", startStroke);
     canvas.addEventListener("pointermove", moveStroke);
@@ -218,12 +261,16 @@
     canvas.addEventListener("mousedown", startStroke);
     canvas.addEventListener("mousemove", moveStroke);
     canvas.addEventListener("mouseup", endStroke);
-    canvas.addEventListener("touchstart", startStroke, { passive: false });
-    canvas.addEventListener("touchmove", moveStroke, { passive: false });
-    canvas.addEventListener("touchend", endStroke);
+    canvas.addEventListener("touchstart", startStroke, false);
+    canvas.addEventListener("touchmove", moveStroke, false);
+    canvas.addEventListener("touchend", endStroke, false);
   }
 
   function clearCanvas() {
+    if (!canvasContext) {
+      return;
+    }
+
     canvasContext.fillStyle = "#ffffff";
     canvasContext.fillRect(0, 0, canvas.width, canvas.height);
     canvasContext.lineWidth = 26;
@@ -233,26 +280,28 @@
     hasInk = false;
   }
 
-  function closeHandwritingDialog() {
-    handwritingDialog.hidden = true;
-  }
-
   function getCurrentLesson() {
-    return state.lessons.find((lesson) => lesson.id === state.currentLessonId) || null;
+    for (var i = 0; i < state.lessons.length; i += 1) {
+      if (state.lessons[i].id === state.currentLessonId) {
+        return state.lessons[i];
+      }
+    }
+    return null;
   }
 
   function findItemById(itemId) {
-    for (const lesson of state.lessons) {
-      const item = lesson.items.find((entry) => entry.id === itemId);
-      if (item) {
-        return item;
+    for (var i = 0; i < state.lessons.length; i += 1) {
+      for (var j = 0; j < state.lessons[i].items.length; j += 1) {
+        if (state.lessons[i].items[j].id === itemId) {
+          return state.lessons[i].items[j];
+        }
       }
     }
     return null;
   }
 
   function escapeHtml(text) {
-    return text
+    return String(text)
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
