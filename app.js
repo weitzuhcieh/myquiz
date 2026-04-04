@@ -13,7 +13,10 @@
   var handwritingDialog = document.getElementById("handwriting-dialog");
   var dialogTitle = document.getElementById("dialog-title");
   var dialogPrompt = document.getElementById("dialog-prompt");
-  var fallbackInput = document.getElementById("fallback-input");
+  var previewDialog = document.getElementById("preview-dialog");
+  var previewCanvas = document.getElementById("preview-canvas");
+  var previewAnswer = document.getElementById("preview-answer");
+  var previewHint = document.getElementById("preview-hint");
   var questionTemplate = document.getElementById("question-template");
   var canvas = document.getElementById("handwriting-canvas");
   var canvasContext = canvas ? canvas.getContext("2d") : null;
@@ -40,6 +43,7 @@
             answer: item.answer,
             hint: item.hint || "",
             userAnswer: "",
+            handwritingImage: "",
             recognizedText: "",
             isCorrect: null,
             isRevealed: false,
@@ -54,8 +58,10 @@
 
   function bindEvents() {
     document.getElementById("close-handwriting-button").addEventListener("click", closeHandwritingDialog);
+    document.getElementById("close-preview-button").addEventListener("click", closePreviewDialog);
     document.getElementById("clear-canvas-button").addEventListener("click", clearCanvas);
     document.getElementById("submit-answer-button").addEventListener("click", submitHandwriting);
+    questionList.addEventListener("click", handleQuestionListClick);
   }
 
   function render() {
@@ -109,15 +115,23 @@
       var blankButton = fragment.querySelector(".blank-button");
       var showAnswerButton = fragment.querySelector(".show-answer-button");
       var feedbackEl = fragment.querySelector(".question-feedback");
+      var comparePanel = fragment.querySelector(".compare-panel");
+      var compareCanvas = fragment.querySelector(".compare-canvas");
+      var compareAnswer = fragment.querySelector(".compare-answer");
+      var compareHint = fragment.querySelector(".compare-hint");
 
       indexEl.textContent = "第 " + (index + 1) + " 題";
       textEl.innerHTML = buildSentenceMarkup(item);
       hintEl.textContent = "注音提示：" + (item.hint || "無");
 
-      blankButton.textContent = item.userAnswer || "點我手寫";
+      blankButton.textContent = item.handwritingImage ? "查看手寫" : "點我手寫";
       blankButton.classList.toggle("is-filled", !!item.userAnswer);
       blankButton.addEventListener("click", function () {
-        openHandwritingDialog(item);
+        if (item.handwritingImage) {
+          openPreviewDialog(item);
+        } else {
+          openHandwritingDialog(item);
+        }
       });
 
       showAnswerButton.addEventListener("click", function () {
@@ -128,10 +142,16 @@
         card.classList.add("is-revealed");
         statusEl.textContent = "已顯示答案";
         feedbackEl.textContent = "正確答案：" + item.answer;
+        if (hasPreviewImage(item)) {
+          comparePanel.hidden = false;
+          drawPreviewToCanvas(compareCanvas, item.handwritingImage);
+          compareAnswer.textContent = item.answer;
+          compareHint.textContent = "注音：" + (item.hint || "");
+        }
       } else if (item.isCorrect === true) {
         card.classList.add("is-correct");
         statusEl.textContent = "已作答";
-        feedbackEl.textContent = item.feedback || ("你填入的是：" + item.userAnswer);
+        feedbackEl.textContent = item.feedback || "已記錄手寫作答。";
       }
 
       questionList.appendChild(fragment);
@@ -142,8 +162,22 @@
     var safeText = escapeHtml(item.text);
     var safeAnswer = escapeHtml(item.answer);
     var hint = escapeHtml(item.hint || "");
-    var blankText = item.userAnswer ? escapeHtml(item.userAnswer) : "＿＿";
-    var replacement = '<span class="blank-inline blank-ruby"><ruby>' + blankText + "<rt>" + hint + "</rt></ruby></span>";
+    var blankText = item.handwritingImage ? "查看手寫" : "＿＿";
+    var extraClass = item.handwritingImage ? " blank-inline--clickable" : "";
+    var replacement = '<span class="blank-inline blank-ruby' + extraClass + '" data-preview-id="' + escapeHtml(item.id) + '"><ruby>' + blankText + "<rt>" + hint + "</rt></ruby></span>";
+
+    if (safeText.indexOf(safeAnswer) >= 0) {
+      return safeText.replace(safeAnswer, replacement);
+    }
+
+    return safeText + " " + replacement;
+  }
+
+  function buildPromptMarkup(item) {
+    var safeText = escapeHtml(item.text);
+    var safeAnswer = escapeHtml(item.answer);
+    var hint = escapeHtml(item.hint || "");
+    var replacement = '<span class="blank-inline blank-ruby"><ruby>＿＿<rt>' + hint + "</rt></ruby></span>";
 
     if (safeText.indexOf(safeAnswer) >= 0) {
       return safeText.replace(safeAnswer, replacement);
@@ -154,15 +188,29 @@
 
   function openHandwritingDialog(item) {
     state.currentItemId = item.id;
-    dialogTitle.textContent = "請寫出：" + item.answer;
-    dialogPrompt.textContent = item.text;
-    fallbackInput.value = item.userAnswer || "";
+    dialogTitle.textContent = "請寫字";
+    dialogPrompt.innerHTML = buildPromptMarkup(item);
     clearCanvas();
     handwritingDialog.hidden = false;
   }
 
   function closeHandwritingDialog() {
     handwritingDialog.hidden = true;
+  }
+
+  function openPreviewDialog(item) {
+    if (!hasPreviewImage(item)) {
+      return;
+    }
+
+    drawPreviewToCanvas(previewCanvas, item.handwritingImage);
+    previewAnswer.textContent = item.answer;
+    previewHint.textContent = "注音：" + (item.hint || "");
+    previewDialog.hidden = false;
+  }
+
+  function closePreviewDialog() {
+    previewDialog.hidden = true;
   }
 
   function revealAnswer(itemId) {
@@ -185,20 +233,37 @@
       return;
     }
 
-    if (!hasInk && !fallbackInput.value.trim()) {
-      item.feedback = "請先手寫，或在下方補打一個字再送出。";
+    if (!hasInk) {
+      item.feedback = "請先手寫再送出。";
       renderLesson();
       return;
     }
 
-    var fallbackText = fallbackInput.value.trim();
-    item.userAnswer = fallbackText || "已手寫作答";
+    item.userAnswer = "已手寫作答";
+    item.handwritingImage = canvas.toDataURL("image/jpeg", 0.82);
     item.recognizedText = "";
     item.isCorrect = true;
-    item.feedback = "已記錄作答，請按「顯示答案」人工核對。";
+    item.feedback = "已記錄作答，可點「查看手寫」或按「顯示答案」人工核對。";
     item.isRevealed = false;
     closeHandwritingDialog();
     renderLesson();
+  }
+
+  function handleQuestionListClick(event) {
+    var target = event.target;
+    if (!target || !target.closest) {
+      return;
+    }
+
+    var previewNode = target.closest("[data-preview-id]");
+    if (!previewNode) {
+      return;
+    }
+
+    var item = findItemById(previewNode.getAttribute("data-preview-id"));
+    if (item) {
+      openPreviewDialog(item);
+    }
   }
 
   function setupCanvas() {
@@ -298,6 +363,38 @@
       }
     }
     return null;
+  }
+
+  function hasPreviewImage(item) {
+    return !!(item && item.handwritingImage && item.handwritingImage.indexOf("data:image/") === 0);
+  }
+
+  function drawPreviewToCanvas(targetCanvas, dataUrl) {
+    if (!targetCanvas) {
+      return;
+    }
+
+    var ctx = targetCanvas.getContext("2d");
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, targetCanvas.width, targetCanvas.height);
+
+    if (!dataUrl) {
+      return;
+    }
+
+    var image = new Image();
+    image.onload = function () {
+      var scale = Math.min(targetCanvas.width / image.width, targetCanvas.height / image.height);
+      var drawWidth = image.width * scale;
+      var drawHeight = image.height * scale;
+      var offsetX = (targetCanvas.width - drawWidth) / 2;
+      var offsetY = (targetCanvas.height - drawHeight) / 2;
+
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, targetCanvas.width, targetCanvas.height);
+      ctx.drawImage(image, offsetX, offsetY, drawWidth, drawHeight);
+    };
+    image.src = dataUrl;
   }
 
   function escapeHtml(text) {

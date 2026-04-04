@@ -59,14 +59,33 @@
         <canvas id="handwriting-canvas" width="900" height="900" aria-label="手寫畫布"></canvas>
       </div>
 
-      <label class="assist-field" for="fallback-input">
-        如果需要，也可以補打一個字或詞
-        <input id="fallback-input" type="text" maxlength="8" autocomplete="off" placeholder="例如：晨">
-      </label>
-
       <div class="modal-actions">
         <button id="clear-canvas-button" class="secondary-button" type="button">清除重寫</button>
         <button id="submit-answer-button" class="primary-button" type="button">送出答案</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="preview-dialog" class="modal" hidden>
+    <div class="modal-card modal-card--preview">
+      <div class="modal-header">
+        <div>
+          <p class="eyebrow">作答對照</p>
+          <h2>手寫答案</h2>
+        </div>
+        <button id="close-preview-button" class="icon-button" type="button" aria-label="關閉">×</button>
+      </div>
+
+      <div class="compare-grid">
+        <div class="compare-box">
+          <p class="compare-label">手寫內容</p>
+          <canvas id="preview-canvas" class="preview-canvas" width="600" height="400" aria-label="手寫答案預覽"></canvas>
+        </div>
+        <div class="compare-box">
+          <p class="compare-label">正確答案</p>
+          <p id="preview-answer" class="preview-answer"></p>
+          <p id="preview-hint" class="preview-hint"></p>
+        </div>
       </div>
     </div>
   </div>
@@ -84,6 +103,17 @@
         <button class="ghost-button show-answer-button" type="button">顯示答案</button>
       </div>
       <p class="question-feedback"></p>
+      <div class="compare-panel" hidden>
+        <div class="compare-box">
+          <p class="compare-label">手寫內容</p>
+          <canvas class="compare-canvas" width="600" height="400" aria-label="手寫答案"></canvas>
+        </div>
+        <div class="compare-box">
+          <p class="compare-label">正確答案</p>
+          <p class="compare-answer"></p>
+          <p class="compare-hint"></p>
+        </div>
+      </div>
     </article>
   </template>
 

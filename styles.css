@@ -216,6 +216,13 @@ input {
   letter-spacing: 0.04em;
 }
 
+.blank-inline--clickable {
+  cursor: pointer;
+  background: rgba(31, 122, 140, 0.1);
+  border-radius: 10px;
+  padding: 0.1em 0.45em 0.18em;
+}
+
 .blank-button,
 .secondary-button,
 .primary-button,
@@ -256,6 +263,50 @@ input {
   color: var(--warning);
 }
 
+.compare-panel,
+.compare-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.compare-panel {
+  margin-top: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.compare-box {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.compare-label,
+.preview-hint,
+.compare-hint {
+  margin: 0 0 8px;
+  color: var(--muted);
+}
+
+.compare-canvas,
+.preview-canvas {
+  width: 100%;
+  max-height: 260px;
+  display: block;
+  border-radius: 12px;
+  background: white;
+  border: 1px solid var(--line);
+}
+
+.compare-answer,
+.preview-answer {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 7vw, 3rem);
+  color: var(--accent-strong);
+}
+
 .modal {
   position: fixed;
   inset: 0;
@@ -285,8 +336,13 @@ input {
 
 .modal-card--fullscreen {
   width: min(100vw - 12px, 900px);
-  max-height: calc(100vh - 24px);
-  overflow-y: auto;
+  height: min(calc(100vh - 24px), 820px);
+  overflow: hidden;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+}
+
+.modal-card--preview {
+  width: min(92vw, 760px);
 }
 
 .modal-header {
@@ -309,11 +365,13 @@ input {
   border-radius: var(--radius-md);
   border: 1px solid var(--line);
   flex-shrink: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
 #handwriting-canvas {
   width: 100%;
-  height: auto;
+  height: min(52vh, 520px);
   background:
     linear-gradient(rgba(31, 122, 140, 0.12) 1px, transparent 1px),
     linear-gradient(90deg, rgba(31, 122, 140, 0.12) 1px, transparent 1px),
@@ -323,6 +381,7 @@ input {
   background-size: 25% 25%, 25% 25%, 100% 100%, 100% 100%, auto;
   touch-action: none;
   border-radius: 12px;
+  display: block;
 }
 
 .field,
@@ -364,6 +423,11 @@ input {
     align-items: start;
     justify-content: space-between;
   }
+
+  .compare-panel,
+  .compare-grid {
+    grid-template-columns: 1.2fr 0.8fr;
+  }
 }
 
 @media (max-width: 879px) {
@@ -384,6 +448,11 @@ input {
   }
 
   .modal-card--fullscreen {
+    height: calc(100vh - 16px);
     padding-bottom: 16px;
+  }
+
+  #handwriting-canvas {
+    height: min(46vh, 420px);
   }
 }
