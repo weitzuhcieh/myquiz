@@ -399,6 +399,14 @@
 
     clearCanvas();
 
+    function getStrokeWidth(event) {
+      var pressure = typeof event.pressure === "number" && event.pressure > 0 ? event.pressure : 0;
+      if (event.pointerType === "pen") {
+        return pressure > 0 ? 5 + (pressure * 7) : 7;
+      }
+      return 12;
+    }
+
     function getPoint(event) {
       var rect = canvas.getBoundingClientRect();
       var source = event.touches && event.touches.length ? event.touches[0] : event;
@@ -417,6 +425,7 @@
       hasInk = true;
       updateSubmitButtonState(false);
       point = getPoint(event);
+      canvasContext.lineWidth = getStrokeWidth(event);
       canvasContext.beginPath();
       canvasContext.moveTo(point.x, point.y);
     }
@@ -426,6 +435,7 @@
       if (!drawing) { return; }
       if (event.preventDefault) { event.preventDefault(); }
       point = getPoint(event);
+      canvasContext.lineWidth = getStrokeWidth(event);
       canvasContext.lineTo(point.x, point.y);
       canvasContext.stroke();
     }
@@ -457,7 +467,7 @@
     if (!canvasContext || !canvas) { return; }
     canvasContext.fillStyle = "#ffffff";
     canvasContext.fillRect(0, 0, canvas.width, canvas.height);
-    canvasContext.lineWidth = 26;
+    canvasContext.lineWidth = 10;
     canvasContext.lineCap = "round";
     canvasContext.lineJoin = "round";
     canvasContext.strokeStyle = "#1d2730";
