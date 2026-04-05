@@ -178,6 +178,15 @@ button {
   gap: 10px;
 }
 
+.lesson-heading-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.lesson-panel .panel-heading {
+  align-items: center;
+}
+
 .hero h1,
 .panel-heading h2,
 .review-header h2 {
@@ -247,6 +256,20 @@ button {
 .bank-list {
   display: grid;
   gap: 14px;
+}
+
+.lesson-toggle-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  min-width: 50px;
+  width: 50px;
+  height: 50px;
+  padding: 0;
+  font-size: 1.2rem;
+  font-weight: 800;
+  line-height: 1;
 }
 
 .inline-tools {
@@ -562,7 +585,7 @@ button {
 
 #handwriting-canvas {
   width: 100%;
-  height: min(52vh, 520px);
+  height: min(62vh, 680px);
   display: block;
   border-radius: 24px;
   background:
@@ -576,6 +599,38 @@ button {
     inset 0 0 0 2px rgba(255, 218, 230, 0.52),
     inset 0 0 0 10px rgba(255, 255, 255, 0.55);
   touch-action: none;
+}
+
+.canvas-wrap.is-expanded {
+  position: fixed;
+  inset: 12px;
+  z-index: 1200;
+  margin: 0;
+  padding: 18px;
+  border-radius: 34px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.995) 0%, rgba(255, 252, 248, 0.995) 100%);
+  box-shadow: 0 28px 56px rgba(154, 95, 126, 0.24);
+}
+
+.canvas-wrap.is-expanded::before {
+  top: 14px;
+  right: 18px;
+}
+
+.canvas-wrap.is-expanded #handwriting-canvas {
+  height: calc(100vh - 110px);
+  min-height: 560px;
+}
+
+.canvas-wrap.is-expanded .canvas-tools {
+  left: 24px;
+  right: 24px;
+  bottom: 24px;
+}
+
+body.canvas-expanded-mode {
+  overflow: hidden;
 }
 
 .secondary-button,
@@ -603,6 +658,11 @@ button {
   padding: 0;
   border-radius: 24px;
   box-shadow: 0 16px 24px rgba(163, 128, 149, 0.16);
+}
+
+.canvas-icon-button--mid {
+  background: linear-gradient(180deg, rgba(255, 248, 214, 0.98) 0%, rgba(255, 252, 237, 0.98) 100%);
+  border-color: rgba(231, 205, 117, 0.62);
 }
 
 .icon-button-mark {
@@ -661,6 +721,12 @@ button {
   background: rgba(255, 255, 255, 0.7);
   color: #c86b8e;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+#expand-canvas-button .icon-button-mark {
+  background: rgba(255, 255, 255, 0.8);
+  color: #9d7a2d;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.92);
 }
 
 #submit-answer-button {
@@ -807,8 +873,12 @@ button {
 
 @media (min-width: 920px) {
   .layout {
-    grid-template-columns: 308px 1fr;
+    grid-template-columns: 252px 1fr;
     align-items: start;
+  }
+
+  .app-shell.lesson-panel-collapsed .layout {
+    grid-template-columns: 124px 1fr;
   }
 
   .panel-heading {
@@ -817,8 +887,60 @@ button {
     justify-content: space-between;
   }
 
+  .lesson-panel .panel-heading {
+    align-items: center;
+  }
+
   .compare-panel {
     grid-template-columns: 1.15fr 0.85fr;
+  }
+}
+
+@media (min-width: 920px) {
+  .lesson-panel {
+    padding: 18px 16px;
+  }
+
+  .lesson-button {
+    padding: 16px 14px 15px;
+  }
+
+  .lesson-panel.is-collapsed {
+    padding: 18px 12px;
+  }
+
+  .lesson-panel.is-collapsed .panel-heading {
+    gap: 8px;
+  }
+
+  .lesson-panel.is-collapsed .lesson-heading-copy #mode-indicator {
+    display: none;
+  }
+
+  .lesson-panel.is-collapsed .lesson-heading-copy h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    line-height: 1;
+  }
+
+  .lesson-panel.is-collapsed .lesson-button {
+    padding: 14px 10px 13px;
+  }
+
+  .lesson-panel.is-collapsed .lesson-button strong {
+    font-size: 0.96rem;
+    line-height: 1.2;
+  }
+
+  .lesson-panel.is-collapsed .lesson-button span {
+    font-size: 0.88rem;
+  }
+
+  .lesson-panel.is-collapsed .lesson-toggle-button {
+    width: 46px;
+    min-width: 46px;
+    height: 46px;
+    align-self: center;
   }
 }
 
@@ -860,7 +982,7 @@ button {
   }
 
   #handwriting-canvas {
-    height: min(46vh, 420px);
+    height: min(58vh, 560px);
   }
 
   .stage-actions {
@@ -883,6 +1005,17 @@ button {
     bottom: 18px;
     left: 18px;
     right: 18px;
+  }
+
+  .canvas-wrap.is-expanded {
+    inset: 8px;
+    padding: 14px;
+    border-radius: 26px;
+  }
+
+  .canvas-wrap.is-expanded #handwriting-canvas {
+    height: calc(100vh - 92px);
+    min-height: 420px;
   }
 
   .canvas-icon-button {

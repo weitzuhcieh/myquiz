@@ -5,6 +5,8 @@
   };
 
   var lessonList = document.getElementById("lesson-list");
+  var lessonPanel = document.querySelector(".lesson-panel");
+  var appShell = document.querySelector(".app-shell");
   var lessonTitle = document.getElementById("lesson-title");
   var lessonDescription = document.getElementById("lesson-description");
   var scoreLabel = document.getElementById("score-label");
@@ -21,18 +23,24 @@
   var bankTitle = document.getElementById("bank-title");
   var bankList = document.getElementById("bank-list");
   var canvas = document.getElementById("handwriting-canvas");
+  var canvasWrap = canvas ? canvas.parentElement : null;
   var canvasContext = canvas ? canvas.getContext("2d") : null;
   var submitButton = document.getElementById("submit-answer-button");
   var submitIconMark = document.getElementById("submit-icon-mark");
+  var expandCanvasButton = document.getElementById("expand-canvas-button");
+  var expandIconMark = document.getElementById("expand-icon-mark");
   var prevButton = document.getElementById("prev-button");
   var nextButton = document.getElementById("next-button");
   var restartButton = document.getElementById("restart-button");
   var bankButton = document.getElementById("bank-button");
   var closeBankButton = document.getElementById("close-bank-button");
   var clearCanvasButton = document.getElementById("clear-canvas-button");
+  var toggleLessonPanelButton = document.getElementById("toggle-lesson-panel");
 
   var drawing = false;
   var hasInk = false;
+  var isCanvasExpanded = false;
+  var isLessonPanelCollapsed = true;
 
   initializeState();
   setupCanvas();
@@ -60,8 +68,14 @@
     if (clearCanvasButton) {
       clearCanvasButton.addEventListener("click", clearCanvas);
     }
+    if (toggleLessonPanelButton) {
+      toggleLessonPanelButton.addEventListener("click", toggleLessonPanel);
+    }
     if (submitButton) {
       submitButton.addEventListener("click", submitCurrentQuestion);
+    }
+    if (expandCanvasButton) {
+      expandCanvasButton.addEventListener("click", toggleCanvasExpand);
     }
     if (restartButton) {
       restartButton.addEventListener("click", restartLesson);
@@ -91,6 +105,7 @@
   }
 
   function render() {
+    renderLessonPanelState();
     renderLessonList();
     renderCurrentLesson();
   }
@@ -102,10 +117,11 @@
     state.lessons.forEach(function (lesson) {
       var button = document.createElement("button");
       var doneCount = getDoneCount(lesson);
+      var lessonLabel = isLessonPanelCollapsed ? getShortLessonName(lesson.name) : lesson.name;
       button.className = "lesson-button" + (lesson.id === state.currentLessonId ? " is-active" : "");
       button.type = "button";
       button.innerHTML =
-        "<strong>" + escapeHtml(lesson.name) + "</strong>" +
+        "<strong>" + escapeHtml(lessonLabel) + "</strong>" +
         "<span>" + doneCount + " / " + lesson.items.length + " 題</span>";
       button.addEventListener("click", function () {
         state.currentLessonId = lesson.id;
@@ -159,10 +175,15 @@
 
     if (prevButton) {
       prevButton.disabled = lesson.currentIndex === 0;
+      prevButton.textContent = isCompactNav() ? "<<" : "上一題";
+      prevButton.setAttribute("aria-label", "上一題");
+      prevButton.setAttribute("title", "上一題");
     }
     if (nextButton) {
       nextButton.disabled = false;
-      nextButton.textContent = isLastQuestion ? "檢查答案" : "下一題";
+      nextButton.textContent = isCompactNav() ? ">>" : (isLastQuestion ? "檢查答案" : "下一題");
+      nextButton.setAttribute("aria-label", isLastQuestion ? "檢查答案" : "下一題");
+      nextButton.setAttribute("title", isLastQuestion ? "檢查答案" : "下一題");
     }
     if (submitButton) {
       if (!isLastChar) {
@@ -246,6 +267,42 @@
     lesson.currentIndex = 0;
     clearCanvas();
     render();
+  }
+
+  function toggleCanvasExpand() {
+    isCanvasExpanded = !isCanvasExpanded;
+    if (canvasWrap) {
+      canvasWrap.classList.toggle("is-expanded", isCanvasExpanded);
+    }
+    if (document.body) {
+      document.body.classList.toggle("canvas-expanded-mode", isCanvasExpanded);
+    }
+    if (expandCanvasButton) {
+      expandCanvasButton.setAttribute("aria-label", isCanvasExpanded ? "縮小畫布" : "放大書寫");
+      expandCanvasButton.setAttribute("title", isCanvasExpanded ? "縮小畫布" : "放大書寫");
+    }
+    if (expandIconMark) {
+      expandIconMark.textContent = isCanvasExpanded ? "×" : "⤢";
+    }
+  }
+
+  function toggleLessonPanel() {
+    isLessonPanelCollapsed = !isLessonPanelCollapsed;
+    render();
+  }
+
+  function renderLessonPanelState() {
+    if (lessonPanel) {
+      lessonPanel.classList.toggle("is-collapsed", isLessonPanelCollapsed);
+    }
+    if (appShell) {
+      appShell.classList.toggle("lesson-panel-collapsed", isLessonPanelCollapsed);
+    }
+    if (toggleLessonPanelButton) {
+      toggleLessonPanelButton.textContent = isLessonPanelCollapsed ? "⇥" : "⇤";
+      toggleLessonPanelButton.setAttribute("aria-label", isLessonPanelCollapsed ? "展開課程欄" : "縮起課程欄");
+      toggleLessonPanelButton.setAttribute("title", isLessonPanelCollapsed ? "展開課程欄" : "縮起課程欄");
+    }
   }
 
   function openBankDialog() {
@@ -638,6 +695,15 @@
 
   function buildQuizItemsFromBank(lesson) {
     return shuffleItems(cloneItems(lesson.bankItems, lesson.id)).slice(0, lesson.quizCount || lesson.bankItems.length);
+  }
+
+  function isCompactNav() {
+    return window.matchMedia && window.matchMedia("(max-width: 919px)").matches;
+  }
+
+  function getShortLessonName(name) {
+    var match = String(name || "").match(/^第[^ ]+課/);
+    return match ? match[0] : String(name || "");
   }
 
   function updateSubmitButtonState(isSaved) {

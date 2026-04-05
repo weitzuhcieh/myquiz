@@ -21,8 +21,11 @@
     <main class="layout">
       <aside class="lesson-panel">
         <div class="panel-heading">
-          <h2>課程</h2>
-          <p id="mode-indicator">目前模式：人工判讀</p>
+          <div class="lesson-heading-copy">
+            <h2>課程</h2>
+            <p id="mode-indicator">目前模式：人工判讀</p>
+          </div>
+          <button id="toggle-lesson-panel" class="secondary-button lesson-toggle-button" type="button" aria-label="縮起課程欄" title="縮起課程欄">⇤</button>
         </div>
         <div id="lesson-list" class="lesson-list" aria-label="課程列表"></div>
       </aside>
@@ -59,6 +62,9 @@
             <div class="canvas-tools">
               <button id="clear-canvas-button" class="secondary-button utility-button icon-button canvas-icon-button" type="button" aria-label="清除重寫" title="清除重寫">
                 <span class="icon-button-mark" aria-hidden="true">↺</span>
+              </button>
+              <button id="expand-canvas-button" class="secondary-button utility-button icon-button canvas-icon-button canvas-icon-button--mid" type="button" aria-label="放大書寫" title="放大書寫">
+                <span id="expand-icon-mark" class="icon-button-mark" aria-hidden="true">⤢</span>
               </button>
               <button id="submit-answer-button" class="primary-button submit-button icon-button canvas-icon-button" type="button" aria-label="送出這一題" title="送出這一題">
                 <span id="submit-icon-mark" class="icon-button-mark" aria-hidden="true">✿</span>
