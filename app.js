@@ -402,9 +402,9 @@
     function getStrokeWidth(event) {
       var pressure = typeof event.pressure === "number" && event.pressure > 0 ? event.pressure : 0;
       if (event.pointerType === "pen") {
-        return pressure > 0 ? 5 + (pressure * 7) : 7;
+        return pressure > 0 ? 1.5 + (pressure * 2.5) : 2.5;
       }
-      return 12;
+      return 4.5;
     }
 
     function getPoint(event) {
@@ -467,7 +467,7 @@
     if (!canvasContext || !canvas) { return; }
     canvasContext.fillStyle = "#ffffff";
     canvasContext.fillRect(0, 0, canvas.width, canvas.height);
-    canvasContext.lineWidth = 10;
+    canvasContext.lineWidth = 3.5;
     canvasContext.lineCap = "round";
     canvasContext.lineJoin = "round";
     canvasContext.strokeStyle = "#1d2730";
