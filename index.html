@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>生字出題器</title>
-  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./styles.css?v=20260405b">
 </head>
 <body>
   <div class="app-shell">
@@ -12,7 +12,7 @@
       <div class="hero-copy">
         <p class="eyebrow">國小三下國語</p>
         <h1>生字出題器</h1>
-        <p class="hero-text">每次只做一題，寫完就直接跳下一題；全部完成後再集中檢查所有答案。</p>
+        <p class="hero-text">一題一頁、逐字作答，全部完成後再集中檢查答案。</p>
       </div>
     </header>
 
@@ -48,14 +48,24 @@
             <span id="question-hint" class="stage-hint"></span>
           </div>
           <p id="question-sentence" class="stage-sentence"></p>
-          <div id="canvas-grid" class="canvas-grid"></div>
-          <div class="canvas-help">每個字各寫在一個格子裡。</div>
-          <div class="canvas-wrap canvas-wrap--inline" hidden>
-            <canvas id="handwriting-canvas" width="900" height="900" aria-label="手寫畫布"></canvas>
+          <div class="char-status">
+            <span id="char-progress" class="stage-progress"></span>
+            <span id="char-label" class="stage-hint"></span>
           </div>
-          <div class="stage-actions">
-            <button id="clear-canvas-button" class="secondary-button" type="button">清除重寫</button>
-            <button id="submit-answer-button" class="primary-button" type="button">送出這一題</button>
+          <div class="canvas-wrap canvas-wrap--inline">
+            <canvas id="handwriting-canvas" width="900" height="900" aria-label="手寫畫布"></canvas>
+            <div class="canvas-tools">
+              <button id="clear-canvas-button" class="secondary-button utility-button icon-button canvas-icon-button" type="button" aria-label="清除重寫" title="清除重寫">
+                <span class="icon-button-mark" aria-hidden="true">↺</span>
+              </button>
+              <button id="submit-answer-button" class="primary-button submit-button icon-button canvas-icon-button" type="button" aria-label="送出這一題" title="送出這一題">
+                <span id="submit-icon-mark" class="icon-button-mark" aria-hidden="true">✿</span>
+              </button>
+            </div>
+          </div>
+          <div class="stage-actions stage-actions-nav">
+            <button id="prev-button" class="secondary-button nav-button" type="button">上一題</button>
+            <button id="next-button" class="secondary-button nav-button" type="button">下一題</button>
           </div>
         </section>
 

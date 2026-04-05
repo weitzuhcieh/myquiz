@@ -13,41 +13,81 @@
   var questionProgress = document.getElementById("question-progress");
   var questionHint = document.getElementById("question-hint");
   var questionSentence = document.getElementById("question-sentence");
+  var charProgress = document.getElementById("char-progress");
+  var charLabel = document.getElementById("char-label");
   var reviewList = document.getElementById("review-list");
   var reviewTemplate = document.getElementById("review-template");
   var bankDialog = document.getElementById("bank-dialog");
   var bankTitle = document.getElementById("bank-title");
   var bankList = document.getElementById("bank-list");
-  var canvasGrid = document.getElementById("canvas-grid");
+  var canvas = document.getElementById("handwriting-canvas");
+  var canvasContext = canvas ? canvas.getContext("2d") : null;
+  var submitButton = document.getElementById("submit-answer-button");
+  var submitIconMark = document.getElementById("submit-icon-mark");
+  var prevButton = document.getElementById("prev-button");
+  var nextButton = document.getElementById("next-button");
+  var restartButton = document.getElementById("restart-button");
+  var bankButton = document.getElementById("bank-button");
+  var closeBankButton = document.getElementById("close-bank-button");
+  var clearCanvasButton = document.getElementById("clear-canvas-button");
 
-  var activePads = [];
+  var drawing = false;
+  var hasInk = false;
 
   initializeState();
+  setupCanvas();
   bindEvents();
   render();
 
   function initializeState() {
     var sourceLessons = window.LESSONS || [];
     state.lessons = sourceLessons.map(function (lesson) {
+      var bankItems = cloneItems(lesson.items, lesson.id);
       return {
         id: lesson.id,
         name: lesson.name,
         description: lesson.description,
-        bankItems: cloneBankItems(lesson.items, lesson.id),
-        currentIndex: 0,
-        items: shuffleItems(cloneBankItems(lesson.items, lesson.id))
+        quizCount: lesson.quizCount || lesson.items.length,
+        bankItems: bankItems,
+        items: buildQuizItems(lesson),
+        currentIndex: 0
       };
     });
-
     state.currentLessonId = state.lessons.length ? state.lessons[0].id : null;
   }
 
   function bindEvents() {
-    document.getElementById("clear-canvas-button").addEventListener("click", clearPads);
-    document.getElementById("submit-answer-button").addEventListener("click", submitCurrentQuestion);
-    document.getElementById("restart-button").addEventListener("click", restartLesson);
-    document.getElementById("bank-button").addEventListener("click", openBankDialog);
-    document.getElementById("close-bank-button").addEventListener("click", closeBankDialog);
+    if (clearCanvasButton) {
+      clearCanvasButton.addEventListener("click", clearCanvas);
+    }
+    if (submitButton) {
+      submitButton.addEventListener("click", submitCurrentQuestion);
+    }
+    if (restartButton) {
+      restartButton.addEventListener("click", restartLesson);
+    }
+    if (bankButton) {
+      bankButton.addEventListener("click", openBankDialog);
+    }
+    if (closeBankButton) {
+      closeBankButton.addEventListener("click", closeBankDialog);
+    }
+    if (prevButton) {
+      prevButton.addEventListener("click", goPrevQuestion);
+    }
+    if (nextButton) {
+      nextButton.addEventListener("click", goNextQuestion);
+    }
+    if (questionSentence) {
+      questionSentence.addEventListener("click", handlePromptClick);
+    }
+    if (bankDialog) {
+      bankDialog.addEventListener("click", function (event) {
+        if (event.target === bankDialog) {
+          closeBankDialog();
+        }
+      });
+    }
   }
 
   function render() {
@@ -56,17 +96,21 @@
   }
 
   function renderLessonList() {
+    if (!lessonList) { return; }
     lessonList.innerHTML = "";
 
     state.lessons.forEach(function (lesson) {
       var button = document.createElement("button");
+      var doneCount = getDoneCount(lesson);
       button.className = "lesson-button" + (lesson.id === state.currentLessonId ? " is-active" : "");
       button.type = "button";
-      button.innerHTML = "<strong>" + escapeHtml(lesson.name) + "</strong><span>" + getDoneCount(lesson) + " / " + lesson.items.length + " 題</span>";
+      button.innerHTML =
+        "<strong>" + escapeHtml(lesson.name) + "</strong>" +
+        "<span>" + doneCount + " / " + lesson.items.length + " 題</span>";
       button.addEventListener("click", function () {
         state.currentLessonId = lesson.id;
+        clearCanvas();
         render();
-        clearPads();
       });
       lessonList.appendChild(button);
     });
@@ -74,12 +118,13 @@
 
   function renderCurrentLesson() {
     var lesson = getCurrentLesson();
+
     if (!lesson) {
       lessonTitle.textContent = "請先選擇課程";
       lessonDescription.textContent = "選課後會從第一題開始作答。";
       scoreLabel.textContent = "0 / 0";
-      questionStage.hidden = true;
-      reviewStage.hidden = true;
+      if (questionStage) { questionStage.hidden = true; }
+      if (reviewStage) { reviewStage.hidden = true; }
       return;
     }
 
@@ -88,48 +133,80 @@
     scoreLabel.textContent = getDoneCount(lesson) + " / " + lesson.items.length;
 
     if (lesson.currentIndex >= lesson.items.length) {
-      questionStage.hidden = true;
-      reviewStage.hidden = false;
+      if (questionStage) { questionStage.hidden = true; }
+      if (reviewStage) { reviewStage.hidden = false; }
       renderReview(lesson);
       return;
     }
 
-    reviewStage.hidden = true;
-    questionStage.hidden = false;
-    renderQuestion(lesson.items[lesson.currentIndex], lesson.currentIndex, lesson.items.length);
+    if (questionStage) { questionStage.hidden = false; }
+    if (reviewStage) { reviewStage.hidden = true; }
+    renderQuestion(lesson, lesson.items[lesson.currentIndex]);
   }
 
-  function renderQuestion(item, currentIndex, totalCount) {
-    questionProgress.textContent = "第 " + (currentIndex + 1) + " 題 / 共 " + totalCount + " 題";
+  function renderQuestion(lesson, item) {
+    var chars = splitAnswerUnits(item.answer);
+    var hints = splitHintUnits(item.hint, chars.length);
+    var currentCharIndex = normalizeCharIndex(item, chars.length);
+    var isLastQuestion = lesson.currentIndex === lesson.items.length - 1;
+    var isLastChar = currentCharIndex === chars.length - 1;
+
+    questionProgress.textContent = "第 " + (lesson.currentIndex + 1) + " 題 / 共 " + lesson.items.length + " 題";
     questionHint.textContent = "注音提示：" + (item.hint || "無");
-    questionSentence.innerHTML = buildPromptMarkup(item);
-    renderPads(item);
+    questionSentence.innerHTML = buildPromptMarkup(item, currentCharIndex);
+    charProgress.textContent = "第 " + (currentCharIndex + 1) + " 字 / 共 " + chars.length + " 字";
+    charLabel.textContent = "現在寫：第 " + (currentCharIndex + 1) + " 字　注音：" + (hints[currentCharIndex] || "無");
+
+    if (prevButton) {
+      prevButton.disabled = lesson.currentIndex === 0;
+    }
+    if (nextButton) {
+      nextButton.disabled = false;
+      nextButton.textContent = isLastQuestion ? "檢查答案" : "下一題";
+    }
+    if (submitButton) {
+      if (!isLastChar) {
+        submitButton.setAttribute("aria-label", "送出這個字");
+        submitButton.setAttribute("title", "送出這個字");
+        if (submitIconMark) {
+          submitIconMark.textContent = "✓";
+        }
+      } else {
+        submitButton.setAttribute("aria-label", "送出這一題");
+        submitButton.setAttribute("title", "送出這一題");
+        if (submitIconMark) {
+          submitIconMark.textContent = "✓";
+        }
+      }
+
+      updateSubmitButtonState(Boolean(item.handwritingImages[currentCharIndex]));
+    }
+
+    restoreCanvasFromSavedImage(item.handwritingImages[currentCharIndex]);
   }
 
   function renderReview(lesson) {
+    if (!reviewList || !reviewTemplate) { return; }
     reviewList.innerHTML = "";
 
     lesson.items.forEach(function (item, index) {
       var fragment = reviewTemplate.content.cloneNode(true);
-      var indexEl = fragment.querySelector(".review-index");
-      var sentenceEl = fragment.querySelector(".review-sentence");
-      var compareCanvasList = fragment.querySelector(".compare-canvas-list");
-      var compareAnswer = fragment.querySelector(".compare-answer");
-      var compareHint = fragment.querySelector(".compare-hint");
+      var reviewCard = fragment.querySelector(".review-card");
+      var previewList = fragment.querySelector(".compare-canvas-list");
 
-      indexEl.textContent = "第 " + (index + 1) + " 題";
-      sentenceEl.innerHTML = buildAnswerMarkup(item);
-      compareAnswer.textContent = item.answer;
-      compareHint.textContent = "注音：" + (item.hint || "");
+      fragment.querySelector(".review-index").textContent = "第 " + (index + 1) + " 題";
+      fragment.querySelector(".review-sentence").innerHTML = buildAnswerMarkup(item);
+      fragment.querySelector(".compare-answer").textContent = item.answer;
+      fragment.querySelector(".compare-hint").textContent = "注音：" + (item.hint || "");
+
+      if (reviewCard && !item.isDone) {
+        reviewCard.classList.add("review-card--pending");
+      }
 
       reviewList.appendChild(fragment);
 
-      if (item.handwritingImages && item.handwritingImages.length) {
-        var appendedCard = reviewList.lastElementChild;
-        var appendedList = appendedCard ? appendedCard.querySelector(".compare-canvas-list") : null;
-        if (appendedList) {
-          drawPreviewList(appendedList, item.handwritingImages);
-        }
+      if (previewList) {
+        drawPreviewList(previewList, item.handwritingImages);
       }
     });
   }
@@ -137,47 +214,43 @@
   function submitCurrentQuestion() {
     var lesson = getCurrentLesson();
     var item = lesson ? lesson.items[lesson.currentIndex] : null;
+    var chars;
+    var currentCharIndex;
+    var isLastChar;
 
-    if (!item) {
+    if (!item) { return; }
+
+    chars = splitAnswerUnits(item.answer);
+    currentCharIndex = normalizeCharIndex(item, chars.length);
+    isLastChar = currentCharIndex === chars.length - 1;
+
+    item.handwritingImages[currentCharIndex] = hasInk ? canvas.toDataURL("image/png") : null;
+
+    if (!isLastChar) {
+      item.currentCharIndex = currentCharIndex + 1;
+      clearCanvas();
+      renderCurrentLesson();
       return;
     }
 
-    if (!allPadsFilled()) {
-      window.alert("請先手寫再送出。");
-      return;
-    }
-
-    item.handwritingImages = activePads.map(function (pad) {
-      return pad.canvas.toDataURL("image/jpeg", 0.82);
-    });
+    item.currentCharIndex = chars.length - 1;
     item.isDone = true;
-    lesson.currentIndex += 1;
-    clearPads();
-    render();
+    renderCurrentLesson();
   }
 
   function restartLesson() {
     var lesson = getCurrentLesson();
-    if (!lesson) {
-      return;
-    }
+    if (!lesson) { return; }
 
-    lesson.items = shuffleItems(cloneBankItems(lesson.bankItems, lesson.id));
-
-    lesson.items.forEach(function (item) {
-      item.isDone = false;
-    });
-
+    lesson.items = buildQuizItemsFromBank(lesson);
     lesson.currentIndex = 0;
-    clearPads();
+    clearCanvas();
     render();
   }
 
   function openBankDialog() {
     var lesson = getCurrentLesson();
-    if (!lesson) {
-      return;
-    }
+    if (!lesson || !bankDialog || !bankList || !bankTitle) { return; }
 
     bankTitle.textContent = lesson.name + " 題庫";
     bankList.innerHTML = "";
@@ -186,9 +259,9 @@
       var card = document.createElement("article");
       card.className = "bank-item";
       card.innerHTML =
-        '<p class="bank-meta">第 ' + (index + 1) + ' 題候選</p>' +
-        '<p>' + buildAnswerMarkup(item) + '</p>' +
-        '<p class="bank-answer">答案：' + escapeHtml(item.answer) + '　注音：' + escapeHtml(item.hint || "無") + "</p>";
+        '<p class="bank-meta">題庫第 ' + (index + 1) + ' 題</p>' +
+        "<p>" + buildAnswerMarkup(item) + "</p>" +
+        '<p class="bank-answer">答案：' + escapeHtml(item.answer) + "　注音：" + escapeHtml(item.hint || "") + "</p>";
       bankList.appendChild(card);
     });
 
@@ -196,27 +269,82 @@
   }
 
   function closeBankDialog() {
-    bankDialog.hidden = true;
+    if (bankDialog) {
+      bankDialog.hidden = true;
+    }
   }
 
-  function createPad(canvas) {
-    var ctx = canvas.getContext("2d");
-    var pad = {
-      canvas: canvas,
-      ctx: ctx,
-      drawing: false,
-      hasInk: false
-    };
+  function goPrevQuestion() {
+    var lesson = getCurrentLesson();
+    if (!lesson || lesson.currentIndex <= 0) { return; }
+    lesson.currentIndex -= 1;
+    clearCanvas();
+    renderCurrentLesson();
+  }
 
-    resetPad(pad);
+  function goNextQuestion() {
+    var lesson = getCurrentLesson();
+    var blanks;
+    var proceed;
+
+    if (!lesson) { return; }
+
+    if (lesson.currentIndex >= lesson.items.length - 1) {
+      blanks = getBlankQuestionIndexes(lesson);
+      if (blanks.length > 0) {
+        proceed = window.confirm(
+          "還有未完成的題目：" + blanks.join("、") + "。確定要先進入檢查答案頁嗎？"
+        );
+        if (!proceed) {
+          return;
+        }
+      }
+
+      lesson.currentIndex = lesson.items.length;
+      clearCanvas();
+      render();
+      return;
+    }
+
+    lesson.currentIndex += 1;
+    clearCanvas();
+    renderCurrentLesson();
+  }
+
+  function handlePromptClick(event) {
+    var target = event.target;
+    var lesson = getCurrentLesson();
+    var item;
+    var charIndex;
+    var chars;
+
+    if (!lesson || !target) { return; }
+
+    target = target.closest(".blank-inline");
+    if (!target) { return; }
+
+    item = lesson.items[lesson.currentIndex];
+    if (!item) { return; }
+
+    chars = splitAnswerUnits(item.answer);
+    charIndex = Number(target.getAttribute("data-char-index"));
+
+    if (isNaN(charIndex) || charIndex < 0 || charIndex >= chars.length) {
+      return;
+    }
+
+    item.currentCharIndex = charIndex;
+    renderCurrentLesson();
+  }
+
+  function setupCanvas() {
+    if (!canvas || !canvasContext) { return; }
+
+    clearCanvas();
 
     function getPoint(event) {
       var rect = canvas.getBoundingClientRect();
-      var source = event;
-      if (event.touches && event.touches.length) {
-        source = event.touches[0];
-      }
-
+      var source = event.touches && event.touches.length ? event.touches[0] : event;
       var scaleX = canvas.width / rect.width;
       var scaleY = canvas.height / rect.height;
       return {
@@ -226,194 +354,194 @@
     }
 
     function startStroke(event) {
-      if (event.preventDefault) {
-        event.preventDefault();
-      }
-
-      pad.drawing = true;
-      pad.hasInk = true;
-      var point = getPoint(event);
-      ctx.beginPath();
-      ctx.moveTo(point.x, point.y);
+      var point;
+      if (event.preventDefault) { event.preventDefault(); }
+      drawing = true;
+      hasInk = true;
+      updateSubmitButtonState(false);
+      point = getPoint(event);
+      canvasContext.beginPath();
+      canvasContext.moveTo(point.x, point.y);
     }
 
     function moveStroke(event) {
-      if (!pad.drawing) {
-        return;
-      }
-
-      if (event.preventDefault) {
-        event.preventDefault();
-      }
-
-      var point = getPoint(event);
-      ctx.lineTo(point.x, point.y);
-      ctx.stroke();
+      var point;
+      if (!drawing) { return; }
+      if (event.preventDefault) { event.preventDefault(); }
+      point = getPoint(event);
+      canvasContext.lineTo(point.x, point.y);
+      canvasContext.stroke();
     }
 
     function endStroke() {
-      pad.drawing = false;
-      ctx.closePath();
+      if (!drawing) { return; }
+      drawing = false;
+      canvasContext.closePath();
     }
 
     canvas.addEventListener("pointerdown", startStroke);
     canvas.addEventListener("pointermove", moveStroke);
     canvas.addEventListener("pointerup", endStroke);
+    canvas.addEventListener("pointercancel", endStroke);
     canvas.addEventListener("pointerleave", endStroke);
+
     canvas.addEventListener("mousedown", startStroke);
     canvas.addEventListener("mousemove", moveStroke);
     canvas.addEventListener("mouseup", endStroke);
-    canvas.addEventListener("touchstart", startStroke, false);
-    canvas.addEventListener("touchmove", moveStroke, false);
-    canvas.addEventListener("touchend", endStroke, false);
+    canvas.addEventListener("mouseleave", endStroke);
 
-    return pad;
+    canvas.addEventListener("touchstart", startStroke, { passive: false });
+    canvas.addEventListener("touchmove", moveStroke, { passive: false });
+    canvas.addEventListener("touchend", endStroke, { passive: false });
+    canvas.addEventListener("touchcancel", endStroke, { passive: false });
   }
 
-  function renderPads(item) {
-    canvasGrid.innerHTML = "";
-    activePads = [];
-
-    var characters = splitAnswerUnits(item.answer);
-    var hints = splitHintUnits(item.hint, characters.length);
-
-    characters.forEach(function (character, index) {
-      var cell = document.createElement("div");
-      cell.className = "canvas-cell";
-
-      var label = document.createElement("div");
-      label.className = "canvas-label";
-      label.textContent = "第 " + (index + 1) + " 字：" + character + "　注音：" + hints[index];
-
-      var charCanvas = document.createElement("canvas");
-      charCanvas.className = "char-canvas";
-      charCanvas.width = 900;
-      charCanvas.height = 900;
-      charCanvas.setAttribute("aria-label", "第 " + (index + 1) + " 字手寫格");
-
-      cell.appendChild(label);
-      cell.appendChild(charCanvas);
-      canvasGrid.appendChild(cell);
-      activePads.push(createPad(charCanvas));
-    });
+  function clearCanvas() {
+    if (!canvasContext || !canvas) { return; }
+    canvasContext.fillStyle = "#ffffff";
+    canvasContext.fillRect(0, 0, canvas.width, canvas.height);
+    canvasContext.lineWidth = 26;
+    canvasContext.lineCap = "round";
+    canvasContext.lineJoin = "round";
+    canvasContext.strokeStyle = "#1d2730";
+    drawing = false;
+    hasInk = false;
   }
 
-  function clearPads() {
-    activePads.forEach(function (pad) {
-      resetPad(pad);
-    });
+  function restoreCanvasFromSavedImage(dataUrl) {
+    clearCanvas();
+    if (!dataUrl || !canvasContext || !canvas) { return; }
+
+    var image = new Image();
+    image.onload = function () {
+      canvasContext.fillStyle = "#ffffff";
+      canvasContext.fillRect(0, 0, canvas.width, canvas.height);
+      canvasContext.drawImage(image, 0, 0, canvas.width, canvas.height);
+      hasInk = true;
+    };
+    image.src = dataUrl;
   }
 
-  function resetPad(pad) {
-    pad.ctx.fillStyle = "#ffffff";
-    pad.ctx.fillRect(0, 0, pad.canvas.width, pad.canvas.height);
-    pad.ctx.lineWidth = 26;
-    pad.ctx.lineCap = "round";
-    pad.ctx.lineJoin = "round";
-    pad.ctx.strokeStyle = "#1d2730";
-    pad.hasInk = false;
-    pad.drawing = false;
-  }
-
-  function allPadsFilled() {
-    if (!activePads.length) {
-      return false;
-    }
-
-    for (var i = 0; i < activePads.length; i += 1) {
-      if (!activePads[i].hasInk) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  function buildPromptMarkup(item) {
+  function buildPromptMarkup(item, currentCharIndex) {
     var safeText = escapeHtml(item.text);
     var safeAnswer = escapeHtml(item.answer);
-    var characters = splitAnswerUnits(item.answer);
-    var hints = splitHintUnits(item.hint, characters.length);
-    var blankParts = [];
-    for (var i = 0; i < characters.length; i += 1) {
-      blankParts.push('<span class="blank-inline blank-ruby"><ruby>＿<rt>' + escapeHtml(hints[i]) + "</rt></ruby></span>");
-    }
-    var replacement = blankParts.join("");
+    var chars = splitAnswerUnits(item.answer);
+    var hints = splitHintUnits(item.hint, chars.length);
+    var parts = [];
+    var index;
+    var replacement;
 
+    for (index = 0; index < chars.length; index += 1) {
+      if (item.handwritingImages[index]) {
+        parts.push(
+          '<button class="blank-inline blank-ruby is-filled" type="button" data-char-index="' + index + '"><ruby>已寫<rt>' +
+          escapeHtml(hints[index]) +
+          "</rt></ruby></button>"
+        );
+      } else if (index === currentCharIndex) {
+        parts.push(
+          '<button class="blank-inline blank-ruby is-current" type="button" data-char-index="' + index + '"><ruby>　<rt>' +
+          escapeHtml(hints[index]) +
+          "</rt></ruby></button>"
+        );
+      } else {
+        parts.push(
+          '<button class="blank-inline blank-ruby" type="button" data-char-index="' + index + '"><ruby>　<rt>' +
+          escapeHtml(hints[index]) +
+          "</rt></ruby></button>"
+        );
+      }
+    }
+
+    replacement = parts.join("");
     if (safeText.indexOf(safeAnswer) >= 0) {
       return safeText.replace(safeAnswer, replacement);
     }
-
     return safeText + " " + replacement;
   }
 
   function buildAnswerMarkup(item) {
     var safeText = escapeHtml(item.text);
     var safeAnswer = escapeHtml(item.answer);
-    var characters = splitAnswerUnits(item.answer);
-    var hints = splitHintUnits(item.hint, characters.length);
-    var answerParts = [];
-    for (var i = 0; i < characters.length; i += 1) {
-      answerParts.push('<span class="blank-inline blank-ruby"><ruby>' + escapeHtml(characters[i]) + "<rt>" + escapeHtml(hints[i]) + "</rt></ruby></span>");
-    }
-    var replacement = answerParts.join("");
+    var chars = splitAnswerUnits(item.answer);
+    var hints = splitHintUnits(item.hint, chars.length);
+    var parts = [];
+    var index;
+    var replacement;
 
+    for (index = 0; index < chars.length; index += 1) {
+      parts.push(
+        '<span class="blank-inline blank-ruby is-answer"><ruby>' +
+        escapeHtml(chars[index]) +
+        "<rt>" +
+        escapeHtml(hints[index]) +
+        "</rt></ruby></span>"
+      );
+    }
+
+    replacement = parts.join("");
     if (safeText.indexOf(safeAnswer) >= 0) {
       return safeText.replace(safeAnswer, replacement);
     }
-
     return safeText + " " + replacement;
-  }
-
-  function drawPreviewToCanvas(targetCanvas, dataUrl) {
-    if (!targetCanvas) {
-      return;
-    }
-
-    var ctx = targetCanvas.getContext("2d");
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, targetCanvas.width, targetCanvas.height);
-
-    if (!dataUrl) {
-      return;
-    }
-
-    var image = new Image();
-    image.onload = function () {
-      var scale = Math.min(targetCanvas.width / image.width, targetCanvas.height / image.height);
-      var drawWidth = image.width * scale;
-      var drawHeight = image.height * scale;
-      var offsetX = (targetCanvas.width - drawWidth) / 2;
-      var offsetY = (targetCanvas.height - drawHeight) / 2;
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, targetCanvas.width, targetCanvas.height);
-      ctx.drawImage(image, offsetX, offsetY, drawWidth, drawHeight);
-    };
-    image.src = dataUrl;
   }
 
   function drawPreviewList(container, imageList) {
     container.innerHTML = "";
 
+    if (!imageList || imageList.length === 0) {
+      var empty = document.createElement("p");
+      empty.className = "canvas-label";
+      empty.textContent = "尚未作答";
+      container.appendChild(empty);
+      return;
+    }
+
     imageList.forEach(function (dataUrl, index) {
-      var label = document.createElement("div");
+      var block = document.createElement("div");
+      var label = document.createElement("p");
+      var previewCanvas = document.createElement("canvas");
+
+      block.className = "compare-preview";
       label.className = "canvas-label";
       label.textContent = "第 " + (index + 1) + " 字";
+      previewCanvas.className = "compare-canvas";
+      previewCanvas.width = 600;
+      previewCanvas.height = 600;
 
-      var canvas = document.createElement("canvas");
-      canvas.className = "compare-canvas";
-      canvas.width = 600;
-      canvas.height = 400;
-
-      container.appendChild(label);
-      container.appendChild(canvas);
-      drawPreviewToCanvas(canvas, dataUrl);
+      block.appendChild(label);
+      block.appendChild(previewCanvas);
+      container.appendChild(block);
+      drawPreviewToCanvas(previewCanvas, dataUrl);
     });
   }
 
+  function drawPreviewToCanvas(targetCanvas, dataUrl) {
+    var ctx;
+    var image;
+
+    if (!targetCanvas) { return; }
+
+    ctx = targetCanvas.getContext("2d");
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, targetCanvas.width, targetCanvas.height);
+
+    if (!dataUrl) { return; }
+
+    image = new Image();
+    image.onload = function () {
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, targetCanvas.width, targetCanvas.height);
+      ctx.drawImage(image, 0, 0, targetCanvas.width, targetCanvas.height);
+    };
+    image.src = dataUrl;
+  }
+
   function getCurrentLesson() {
-    for (var i = 0; i < state.lessons.length; i += 1) {
-      if (state.lessons[i].id === state.currentLessonId) {
-        return state.lessons[i];
+    var index;
+    for (index = 0; index < state.lessons.length; index += 1) {
+      if (state.lessons[index].id === state.currentLessonId) {
+        return state.lessons[index];
       }
     }
     return null;
@@ -429,45 +557,93 @@
     return count;
   }
 
+  function getBlankQuestionIndexes(lesson) {
+    var blanks = [];
+    lesson.items.forEach(function (item, index) {
+      if (!item.isDone) {
+        blanks.push("第 " + (index + 1) + " 題");
+      }
+    });
+    return blanks;
+  }
+
+  function normalizeCharIndex(item, charCount) {
+    if (typeof item.currentCharIndex !== "number" || item.currentCharIndex < 0) {
+      item.currentCharIndex = 0;
+    }
+    if (item.currentCharIndex > charCount - 1) {
+      item.currentCharIndex = charCount - 1;
+    }
+    return item.currentCharIndex;
+  }
+
   function shuffleItems(items) {
     var result = items.slice();
-    for (var i = result.length - 1; i > 0; i -= 1) {
-      var j = Math.floor(Math.random() * (i + 1));
-      var temp = result[i];
-      result[i] = result[j];
-      result[j] = temp;
+    var index;
+    var swapIndex;
+    var temp;
+
+    for (index = result.length - 1; index > 0; index -= 1) {
+      swapIndex = Math.floor(Math.random() * (index + 1));
+      temp = result[index];
+      result[index] = result[swapIndex];
+      result[swapIndex] = temp;
     }
+
     return result;
   }
 
   function splitAnswerUnits(answer) {
-    return Array.from(String(answer).replace(/\s+/g, ""));
+    return Array.from(String(answer || "").replace(/\s+/g, ""));
   }
 
   function splitHintUnits(hint, count) {
     var parts = String(hint || "").trim().split(/\s+/).filter(Boolean);
+    var result = [];
+    var index;
+
     if (parts.length === count) {
       return parts;
     }
 
-    var result = [];
-    for (var i = 0; i < count; i += 1) {
-      result.push(parts[i] || (hint || "無"));
+    for (index = 0; index < count; index += 1) {
+      result.push(parts[index] || parts[0] || "");
     }
+
     return result;
   }
 
-  function cloneBankItems(items, lessonId) {
+  function cloneItems(items, lessonId) {
     return items.map(function (item, index) {
+      var charCount = splitAnswerUnits(item.answer).length;
       return {
         id: lessonId + "-" + (index + 1),
         text: item.text,
         answer: item.answer,
         hint: item.hint || "",
-        handwritingImages: [],
+        handwritingImages: new Array(charCount).fill(null),
+        currentCharIndex: 0,
         isDone: false
       };
     });
+  }
+
+  function buildQuizItems(lesson) {
+    return buildQuizItemsFromBank({
+      id: lesson.id,
+      bankItems: cloneItems(lesson.items, lesson.id),
+      quizCount: lesson.quizCount || lesson.items.length
+    });
+  }
+
+  function buildQuizItemsFromBank(lesson) {
+    return shuffleItems(cloneItems(lesson.bankItems, lesson.id)).slice(0, lesson.quizCount || lesson.bankItems.length);
+  }
+
+  function updateSubmitButtonState(isSaved) {
+    if (!submitButton) { return; }
+    submitButton.classList.toggle("is-saved", Boolean(isSaved));
+    submitButton.classList.toggle("is-pending", !isSaved);
   }
 
   function escapeHtml(text) {
