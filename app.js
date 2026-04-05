@@ -1,6 +1,7 @@
 (function () {
   var LESSON_BANK_STORAGE_KEY = "myquiz-lesson-bank-items-v2";
   var LEGACY_CUSTOM_BANK_STORAGE_KEY = "myquiz-custom-bank-items-v1";
+  var DEFAULT_QUIZ_COUNT = 10;
   var BOPOMOFO_SYMBOLS = [
     "ㄅ", "ㄆ", "ㄇ", "ㄈ", "ㄉ", "ㄊ", "ㄋ", "ㄌ", "ㄍ", "ㄎ", "ㄏ",
     "ㄐ", "ㄑ", "ㄒ", "ㄓ", "ㄔ", "ㄕ", "ㄖ", "ㄗ", "ㄘ", "ㄙ",
@@ -79,7 +80,7 @@
         id: lesson.id,
         name: lesson.name,
         description: lesson.description,
-        quizCount: lesson.quizCount || lesson.items.length,
+        quizCount: resolveQuizCount(bankItems.length),
         bankItems: bankItems,
         items: buildQuizItems(lesson, bankItems),
         currentIndex: 0
@@ -929,12 +930,19 @@
     return buildQuizItemsFromBank({
       id: lesson.id,
       bankItems: bankItems || cloneItems(lesson.items, lesson.id),
-      quizCount: lesson.quizCount || lesson.items.length
+      quizCount: resolveQuizCount((bankItems || lesson.items || []).length)
     });
   }
 
   function buildQuizItemsFromBank(lesson) {
-    return shuffleItems(cloneItems(lesson.bankItems, lesson.id)).slice(0, lesson.quizCount || lesson.bankItems.length);
+    var availableCount = lesson.bankItems.length;
+    var quizCount = resolveQuizCount(availableCount);
+    return shuffleItems(cloneItems(lesson.bankItems, lesson.id)).slice(0, quizCount);
+  }
+
+  function resolveQuizCount(availableCount) {
+    var safeAvailableCount = Math.max(0, Number(availableCount) || 0);
+    return Math.min(DEFAULT_QUIZ_COUNT, safeAvailableCount);
   }
 
   function isCompactNav() {
