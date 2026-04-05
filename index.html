@@ -6,7 +6,7 @@
   <meta name="color-scheme" content="light">
   <meta name="supported-color-schemes" content="light">
   <title>生字出題器</title>
-  <link rel="stylesheet" href="./styles.css?v=20260405c">
+  <link rel="stylesheet" href="./styles.css?v=20260405f">
 </head>
 <body>
   <div class="app-shell">
@@ -98,6 +98,61 @@
         </div>
         <button id="close-bank-button" class="secondary-button" type="button">關閉</button>
       </div>
+      <form id="bank-form" class="bank-form">
+        <div class="bank-form-heading">
+          <div>
+            <p class="bank-form-kicker">題庫維護</p>
+            <h3 id="bank-form-title" class="bank-form-title">手動新增題目</h3>
+          </div>
+          <button id="cancel-bank-edit-button" class="secondary-button" type="button" hidden>取消編輯</button>
+        </div>
+        <div class="bank-form-grid">
+          <label class="bank-field bank-field--full" for="bank-sentence-input">
+            <span class="bank-field-label">句子</span>
+            <textarea
+              id="bank-sentence-input"
+              class="bank-input bank-textarea"
+              rows="3"
+              placeholder="例如：三個角落各有一個像回字形的方塊。"
+              required
+            ></textarea>
+          </label>
+          <label class="bank-field" for="bank-answer-input">
+            <span class="bank-field-label">要考的單字或詞語</span>
+            <input
+              id="bank-answer-input"
+              class="bank-input"
+              type="text"
+              inputmode="text"
+              placeholder="例如：回"
+              required
+            >
+          </label>
+          <label class="bank-field" for="bank-hint-input">
+            <span class="bank-field-label">注音</span>
+            <input
+              id="bank-hint-input"
+              class="bank-input"
+              type="text"
+              inputmode="text"
+              placeholder="可手動輸入，或直接點下面注音符號"
+            >
+          </label>
+          <div class="bank-field bank-field--full">
+            <span class="bank-field-label">注音符號表</span>
+            <div id="bopomofo-toolbar" class="bopomofo-toolbar" aria-label="注音符號工具列">
+              <button type="button" class="secondary-button bopomofo-tool" data-bopomofo-action="space">空格</button>
+              <button type="button" class="secondary-button bopomofo-tool" data-bopomofo-action="backspace">刪一個</button>
+              <button type="button" class="secondary-button bopomofo-tool" data-bopomofo-action="clear">清空</button>
+            </div>
+            <div id="bopomofo-palette" class="bopomofo-palette" aria-label="注音符號表"></div>
+          </div>
+        </div>
+        <div class="bank-form-actions">
+          <p id="bank-form-status" class="bank-form-status">輸入句子和要考的字詞後，再用注音欄或下方符號表手動拼出注音。</p>
+          <button id="add-bank-item-button" class="primary-button" type="submit">新增到本課題庫</button>
+        </div>
+      </form>
       <div id="bank-list" class="bank-list"></div>
     </div>
   </div>
@@ -123,7 +178,7 @@
     </article>
   </template>
 
-  <script src="./lessons.js"></script>
-  <script src="./app.js"></script>
+  <script src="./lessons.js?v=20260405a"></script>
+  <script src="./app.js?v=20260405c"></script>
 </body>
 </html>

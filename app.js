@@ -1,7 +1,17 @@
 (function () {
+  var LESSON_BANK_STORAGE_KEY = "myquiz-lesson-bank-items-v2";
+  var LEGACY_CUSTOM_BANK_STORAGE_KEY = "myquiz-custom-bank-items-v1";
+  var BOPOMOFO_SYMBOLS = [
+    "ㄅ", "ㄆ", "ㄇ", "ㄈ", "ㄉ", "ㄊ", "ㄋ", "ㄌ", "ㄍ", "ㄎ", "ㄏ",
+    "ㄐ", "ㄑ", "ㄒ", "ㄓ", "ㄔ", "ㄕ", "ㄖ", "ㄗ", "ㄘ", "ㄙ",
+    "ㄧ", "ㄨ", "ㄩ", "ㄚ", "ㄛ", "ㄜ", "ㄝ", "ㄞ", "ㄟ", "ㄠ", "ㄡ",
+    "ㄢ", "ㄣ", "ㄤ", "ㄥ", "ㄦ", "˙", "ˊ", "ˇ", "ˋ"
+  ];
   var state = {
     lessons: [],
-    currentLessonId: null
+    currentLessonId: null,
+    storedBankItemsByLesson: {},
+    editingBankItemId: null
   };
 
   var lessonList = document.getElementById("lesson-list");
@@ -22,6 +32,16 @@
   var bankDialog = document.getElementById("bank-dialog");
   var bankTitle = document.getElementById("bank-title");
   var bankList = document.getElementById("bank-list");
+  var bankForm = document.getElementById("bank-form");
+  var bankSentenceInput = document.getElementById("bank-sentence-input");
+  var bankAnswerInput = document.getElementById("bank-answer-input");
+  var bankHintInput = document.getElementById("bank-hint-input");
+  var bankFormStatus = document.getElementById("bank-form-status");
+  var bankFormTitle = document.getElementById("bank-form-title");
+  var addBankItemButton = document.getElementById("add-bank-item-button");
+  var cancelBankEditButton = document.getElementById("cancel-bank-edit-button");
+  var bopomofoToolbar = document.getElementById("bopomofo-toolbar");
+  var bopomofoPalette = document.getElementById("bopomofo-palette");
   var canvas = document.getElementById("handwriting-canvas");
   var canvasWrap = canvas ? canvas.parentElement : null;
   var canvasContext = canvas ? canvas.getContext("2d") : null;
@@ -43,21 +63,25 @@
   var isLessonPanelCollapsed = true;
 
   initializeState();
+  renderBopomofoPalette();
   setupCanvas();
   bindEvents();
   render();
 
   function initializeState() {
     var sourceLessons = window.LESSONS || [];
+    state.storedBankItemsByLesson = loadStoredBankItems();
     state.lessons = sourceLessons.map(function (lesson) {
-      var bankItems = cloneItems(lesson.items, lesson.id);
+      var storedItems = state.storedBankItemsByLesson[lesson.id];
+      var sourceItems = getInitialBankSource(lesson, storedItems);
+      var bankItems = cloneItems(sourceItems, lesson.id);
       return {
         id: lesson.id,
         name: lesson.name,
         description: lesson.description,
         quizCount: lesson.quizCount || lesson.items.length,
         bankItems: bankItems,
-        items: buildQuizItems(lesson),
+        items: buildQuizItems(lesson, bankItems),
         currentIndex: 0
       };
     });
@@ -85,6 +109,21 @@
     }
     if (closeBankButton) {
       closeBankButton.addEventListener("click", closeBankDialog);
+    }
+    if (bankForm) {
+      bankForm.addEventListener("submit", handleBankFormSubmit);
+    }
+    if (cancelBankEditButton) {
+      cancelBankEditButton.addEventListener("click", resetBankForm);
+    }
+    if (bankList) {
+      bankList.addEventListener("click", handleBankListClick);
+    }
+    if (bopomofoToolbar) {
+      bopomofoToolbar.addEventListener("click", handleBopomofoToolClick);
+    }
+    if (bopomofoPalette) {
+      bopomofoPalette.addEventListener("click", handleBopomofoPaletteClick);
     }
     if (prevButton) {
       prevButton.addEventListener("click", goPrevQuestion);
@@ -310,24 +349,210 @@
     if (!lesson || !bankDialog || !bankList || !bankTitle) { return; }
 
     bankTitle.textContent = lesson.name + " 題庫";
-    bankList.innerHTML = "";
-
-    lesson.bankItems.forEach(function (item, index) {
-      var card = document.createElement("article");
-      card.className = "bank-item";
-      card.innerHTML =
-        '<p class="bank-meta">題庫第 ' + (index + 1) + ' 題</p>' +
-        "<p>" + buildAnswerMarkup(item) + "</p>" +
-        '<p class="bank-answer">答案：' + escapeHtml(item.answer) + "　注音：" + escapeHtml(item.hint || "") + "</p>";
-      bankList.appendChild(card);
-    });
-
+    renderBankList(lesson);
+    resetBankForm();
     bankDialog.hidden = false;
   }
 
   function closeBankDialog() {
     if (bankDialog) {
       bankDialog.hidden = true;
+    }
+  }
+
+  function renderBankList(lesson) {
+    if (!bankList) { return; }
+
+    bankList.innerHTML = "";
+
+    lesson.bankItems.forEach(function (item, index) {
+      var card = document.createElement("article");
+      card.className = "bank-item";
+      card.innerHTML =
+        '<div class="bank-item-header">' +
+          '<p class="bank-meta">題庫第 ' + (index + 1) + ' 題</p>' +
+          (item.isCustom ? '<span class="bank-badge">手動新增</span>' : "") +
+        "</div>" +
+        "<p>" + buildAnswerMarkup(item) + "</p>" +
+        '<p class="bank-answer">答案：' + escapeHtml(item.answer) + "　注音：" + escapeHtml(item.hint || "") + "</p>" +
+        '<div class="bank-item-actions">' +
+          '<button class="secondary-button bank-item-action" type="button" data-bank-action="edit" data-bank-id="' + escapeHtml(item.id) + '">修改</button>' +
+          '<button class="secondary-button bank-item-action bank-item-action--danger" type="button" data-bank-action="delete" data-bank-id="' + escapeHtml(item.id) + '">刪除</button>' +
+        "</div>";
+      bankList.appendChild(card);
+    });
+  }
+
+  function handleBankFormSubmit(event) {
+    var lesson = getCurrentLesson();
+    var sentence;
+    var answer;
+    var hint;
+    var item;
+    var storageSaved;
+    var editingItem;
+
+    if (event && event.preventDefault) {
+      event.preventDefault();
+    }
+
+    if (!lesson || !bankSentenceInput || !bankAnswerInput || !bankHintInput) {
+      return;
+    }
+
+    sentence = normalizeText(bankSentenceInput.value);
+    answer = normalizeAnswer(bankAnswerInput.value);
+    hint = normalizeHintText(bankHintInput.value);
+
+    if (!sentence) {
+      setBankFormStatus("請先輸入句子。", "error");
+      bankSentenceInput.focus();
+      return;
+    }
+
+    if (!answer) {
+      setBankFormStatus("請輸入要考的單字或詞語。", "error");
+      bankAnswerInput.focus();
+      return;
+    }
+
+    if (sentence.indexOf(answer) < 0) {
+      setBankFormStatus("句子裡找不到這個字詞，請確認內容一致。", "error");
+      bankAnswerInput.focus();
+      return;
+    }
+
+    if (!hint) {
+      setBankFormStatus("請先手動填入注音。", "error");
+      bankHintInput.focus();
+      return;
+    }
+
+    editingItem = findBankItemById(lesson, state.editingBankItemId);
+
+    if (editingItem) {
+      editingItem.text = sentence;
+      editingItem.answer = answer;
+      editingItem.hint = hint;
+      editingItem.handwritingImages = new Array(splitAnswerUnits(answer).length).fill(null);
+      editingItem.currentCharIndex = 0;
+      editingItem.isDone = false;
+      storageSaved = persistLessonBankItems(lesson);
+    } else {
+      item = createBankItem(lesson.id, {
+        text: sentence,
+        answer: answer,
+        hint: hint,
+        isCustom: true
+      }, lesson.bankItems.length);
+
+      lesson.bankItems.push(item);
+      storageSaved = persistLessonBankItems(lesson);
+    }
+
+    renderBankList(lesson);
+    render();
+    resetBankForm();
+    setBankFormStatus(
+      storageSaved
+        ? (editingItem ? "題目已更新。重新練習本課後，新的題庫內容就會被抽到。" : "已加入本課題庫。重新練習本課後，新題目就能被抽到。")
+        : "已加入本次題庫，但這台裝置目前無法儲存到本機。",
+      storageSaved ? "success" : "error"
+    );
+  }
+
+  function resetBankForm() {
+    if (bankForm) {
+      bankForm.reset();
+    }
+    state.editingBankItemId = null;
+    if (bankFormTitle) {
+      bankFormTitle.textContent = "手動新增題目";
+    }
+    if (addBankItemButton) {
+      addBankItemButton.textContent = "新增到本課題庫";
+    }
+    if (cancelBankEditButton) {
+      cancelBankEditButton.hidden = true;
+    }
+    setBankFormStatus("輸入句子和要考的字詞後，再用注音欄或下方符號表手動拼出注音。", "");
+  }
+
+  function handleBankListClick(event) {
+    var target = event.target;
+    var lesson = getCurrentLesson();
+    var action;
+    var bankId;
+    var item;
+    var storageSaved;
+    var index;
+
+    if (!lesson || !target) { return; }
+
+    target = target.closest("[data-bank-action]");
+    if (!target) { return; }
+
+    action = target.getAttribute("data-bank-action");
+    bankId = target.getAttribute("data-bank-id");
+    item = findBankItemById(lesson, bankId);
+    index = findBankItemIndexById(lesson, bankId);
+
+    if (!item || index < 0) { return; }
+
+    if (action === "edit") {
+      state.editingBankItemId = item.id;
+      if (bankSentenceInput) {
+        bankSentenceInput.value = item.text;
+      }
+      if (bankAnswerInput) {
+        bankAnswerInput.value = item.answer;
+      }
+      if (bankHintInput) {
+        bankHintInput.value = item.hint;
+      }
+      if (bankFormTitle) {
+        bankFormTitle.textContent = "修改題目";
+      }
+      if (addBankItemButton) {
+        addBankItemButton.textContent = "儲存修改";
+      }
+      if (cancelBankEditButton) {
+        cancelBankEditButton.hidden = false;
+      }
+      setBankFormStatus("正在編輯這一題，改完後按「儲存修改」。", "success");
+      if (bankSentenceInput && bankSentenceInput.focus) {
+        bankSentenceInput.focus();
+      }
+      return;
+    }
+
+    if (action === "delete") {
+      if (!window.confirm("確定要刪除這一題嗎？")) {
+        return;
+      }
+      lesson.bankItems.splice(index, 1);
+      storageSaved = persistLessonBankItems(lesson);
+      if (state.editingBankItemId === bankId) {
+        resetBankForm();
+      }
+      renderBankList(lesson);
+      render();
+      setBankFormStatus(
+        storageSaved ? "題目已刪除。重新練習本課後，新的題庫內容就會被抽到。" : "題目已刪除，但這台裝置目前無法儲存到本機。",
+        storageSaved ? "success" : "error"
+      );
+    }
+  }
+
+  function setBankFormStatus(message, type) {
+    if (!bankFormStatus) { return; }
+    bankFormStatus.textContent = message;
+    bankFormStatus.classList.remove("is-error", "is-success");
+    if (type === "error") {
+      bankFormStatus.classList.add("is-error");
+    }
+    if (type === "success") {
+      bankFormStatus.classList.add("is-success");
     }
   }
 
@@ -682,23 +907,28 @@
 
   function cloneItems(items, lessonId) {
     return items.map(function (item, index) {
-      var charCount = splitAnswerUnits(item.answer).length;
-      return {
-        id: lessonId + "-" + (index + 1),
-        text: item.text,
-        answer: item.answer,
-        hint: item.hint || "",
-        handwritingImages: new Array(charCount).fill(null),
-        currentCharIndex: 0,
-        isDone: false
-      };
+      return createBankItem(lessonId, item, index);
     });
   }
 
-  function buildQuizItems(lesson) {
+  function createBankItem(lessonId, item, index) {
+    var charCount = splitAnswerUnits(item.answer).length;
+    return {
+      id: item.id || (lessonId + "-" + (index + 1) + "-" + Date.now() + "-" + Math.floor(Math.random() * 1000)),
+      text: item.text,
+      answer: item.answer,
+      hint: item.hint || "",
+      handwritingImages: new Array(charCount).fill(null),
+      currentCharIndex: 0,
+      isDone: false,
+      isCustom: Boolean(item.isCustom)
+    };
+  }
+
+  function buildQuizItems(lesson, bankItems) {
     return buildQuizItemsFromBank({
       id: lesson.id,
-      bankItems: cloneItems(lesson.items, lesson.id),
+      bankItems: bankItems || cloneItems(lesson.items, lesson.id),
       quizCount: lesson.quizCount || lesson.items.length
     });
   }
@@ -720,6 +950,161 @@
     if (!submitButton) { return; }
     submitButton.classList.toggle("is-saved", Boolean(isSaved));
     submitButton.classList.toggle("is-pending", !isSaved);
+  }
+
+  function renderBopomofoPalette() {
+    if (!bopomofoPalette) { return; }
+
+    bopomofoPalette.innerHTML = "";
+    BOPOMOFO_SYMBOLS.forEach(function (symbol) {
+      var button = document.createElement("button");
+      button.type = "button";
+      button.className = "bopomofo-chip";
+      button.setAttribute("data-bopomofo", symbol);
+      button.textContent = symbol;
+      bopomofoPalette.appendChild(button);
+    });
+  }
+
+  function handleBopomofoPaletteClick(event) {
+    var target = event.target;
+    var symbol;
+
+    if (!target || !bankHintInput) { return; }
+
+    target = target.closest("[data-bopomofo]");
+    if (!target) { return; }
+
+    symbol = target.getAttribute("data-bopomofo");
+    appendHintSymbol(symbol || "");
+  }
+
+  function handleBopomofoToolClick(event) {
+    var target = event.target;
+    var action;
+
+    if (!target || !bankHintInput) { return; }
+
+    target = target.closest("[data-bopomofo-action]");
+    if (!target) { return; }
+
+    action = target.getAttribute("data-bopomofo-action");
+    if (action === "space") {
+      appendHintSymbol(" ");
+      return;
+    }
+    if (action === "backspace") {
+      bankHintInput.value = bankHintInput.value.slice(0, -1);
+      bankHintInput.focus();
+      return;
+    }
+    if (action === "clear") {
+      bankHintInput.value = "";
+      bankHintInput.focus();
+    }
+  }
+
+  function appendHintSymbol(symbol) {
+    if (!bankHintInput || !symbol) { return; }
+    bankHintInput.value += symbol;
+    bankHintInput.focus();
+  }
+
+  function getInitialBankSource(lesson, storedItems) {
+    var hasPersistentIds;
+    if (!storedItems || !storedItems.length) {
+      return lesson.items;
+    }
+    hasPersistentIds = storedItems.some(function (item) {
+      return Boolean(item && item.id);
+    });
+    return hasPersistentIds ? storedItems : lesson.items.concat(storedItems);
+  }
+
+  function persistLessonBankItems(lesson) {
+    var stored = state.storedBankItemsByLesson || {};
+    stored[lesson.id] = lesson.bankItems.map(function (item) {
+      return {
+        id: item.id,
+        text: item.text,
+        answer: item.answer,
+        hint: item.hint,
+        isCustom: Boolean(item.isCustom)
+      };
+    });
+    state.storedBankItemsByLesson = stored;
+    return saveStoredBankItems(stored);
+  }
+
+  function loadStoredBankItems() {
+    var storage;
+    var parsed;
+    var legacyStorage;
+    var legacyParsed;
+    var lessonId;
+
+    try {
+      storage = window.localStorage.getItem(LESSON_BANK_STORAGE_KEY);
+      parsed = storage ? JSON.parse(storage) : {};
+      if (parsed && typeof parsed === "object" && Object.keys(parsed).length) {
+        return parsed;
+      }
+    } catch (error) {
+      parsed = {};
+    }
+
+    try {
+      legacyStorage = window.localStorage.getItem(LEGACY_CUSTOM_BANK_STORAGE_KEY);
+      legacyParsed = legacyStorage ? JSON.parse(legacyStorage) : {};
+      if (!legacyParsed || typeof legacyParsed !== "object") {
+        return {};
+      }
+      parsed = {};
+      for (lessonId in legacyParsed) {
+        if (Object.prototype.hasOwnProperty.call(legacyParsed, lessonId)) {
+          parsed[lessonId] = legacyParsed[lessonId];
+        }
+      }
+      return parsed;
+    } catch (error) {
+      return {};
+    }
+  }
+
+  function saveStoredBankItems(itemsByLesson) {
+    try {
+      window.localStorage.setItem(LESSON_BANK_STORAGE_KEY, JSON.stringify(itemsByLesson));
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  function findBankItemById(lesson, bankId) {
+    var index = findBankItemIndexById(lesson, bankId);
+    return index >= 0 ? lesson.bankItems[index] : null;
+  }
+
+  function findBankItemIndexById(lesson, bankId) {
+    var index;
+    for (index = 0; index < lesson.bankItems.length; index += 1) {
+      if (lesson.bankItems[index].id === bankId) {
+        return index;
+      }
+    }
+    return -1;
+  }
+
+  function normalizeText(text) {
+    return String(text || "").trim().replace(/\s+/g, " ");
+  }
+
+  function normalizeAnswer(answer) {
+    return String(answer || "").trim().replace(/\s+/g, "");
+  }
+
+  function normalizeHintText(hint) {
+    return String(hint || "").trim().replace(/\s+/g, " ");
   }
 
   function escapeHtml(text) {
