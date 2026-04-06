@@ -8,13 +8,14 @@
   <title>生字出題器</title>
   <link rel="stylesheet" href="./styles.css?v=20260405f">
 </head>
-<body>
+<body class="landing-mode">
   <div class="app-shell">
     <header class="hero">
       <div class="hero-copy">
         <p class="eyebrow">國小三下國語</p>
         <h1>生字出題器</h1>
         <p class="hero-text">一題一頁、逐字作答，全部完成後再集中檢查答案。</p>
+        <button id="enter-quiz-button" class="primary-button enter-quiz-button" type="button"></button>
       </div>
     </header>
 
@@ -36,19 +37,20 @@
             <p class="eyebrow">作答區</p>
             <h2 id="lesson-title">請先選擇課程</h2>
           </div>
-          <div class="score-card">
+          <div class="score-card" hidden>
             <span id="score-label">0 / 0</span>
             <span id="score-subtitle">進度</span>
           </div>
         </div>
 
         <p id="lesson-description" class="lesson-description">選課後會從第一題開始作答。</p>
-        <div class="inline-tools">
+        <div class="inline-tools" hidden>
           <button id="bank-button" class="secondary-button" type="button">檢視本課題庫</button>
         </div>
 
         <section id="question-stage" class="stage-card" hidden>
           <div class="stage-top">
+            <button id="stage-bank-button" class="secondary-button stage-bank-button" type="button">瑼Ｚ??祈玨憿澈</button>
             <span id="question-progress" class="stage-progress"></span>
             <span id="question-hint" class="stage-hint"></span>
           </div>

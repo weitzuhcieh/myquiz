@@ -138,6 +138,80 @@ button {
   -webkit-overflow-scrolling: touch;
 }
 
+body.landing-mode .app-shell {
+  height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 0;
+  overflow: hidden;
+}
+
+body.landing-mode .layout {
+  display: none;
+}
+
+body.quiz-mode .hero {
+  display: none;
+}
+
+body.quiz-mode .app-shell {
+  padding: 8px 0;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+body.quiz-mode .layout {
+  margin-top: 0;
+  height: calc(100dvh - 16px);
+  align-items: stretch;
+}
+
+body.quiz-mode .lesson-panel,
+body.quiz-mode .quiz-panel {
+  height: 100%;
+  overflow: hidden;
+}
+
+body.quiz-mode .lesson-list {
+  max-height: calc(100% - 86px);
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+body.quiz-mode .quiz-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+body.quiz-mode #question-stage {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-top: 10px;
+}
+
+body.quiz-mode .stage-sentence {
+  margin: 12px 0;
+}
+
+body.quiz-mode .canvas-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 12px 0 0;
+}
+
+body.quiz-mode #handwriting-canvas {
+  height: 100%;
+  min-height: 240px;
+}
+
+body.quiz-mode #review-stage {
+  overflow-y: auto;
+}
+
 .hero,
 .lesson-panel,
 .quiz-panel,
@@ -223,6 +297,12 @@ button {
   font-size: 1.02rem;
 }
 
+.enter-quiz-button {
+  width: fit-content;
+  min-width: 170px;
+  margin-top: 8px;
+}
+
 .eyebrow {
   display: inline-flex;
   align-items: center;
@@ -289,6 +369,16 @@ button {
   margin: 16px 0 0;
 }
 
+.stage-bank-button {
+  min-height: 44px;
+  padding: 10px 18px;
+  flex: 0 0 auto;
+  font-size: 1rem;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+
 .lesson-button,
 .secondary-button,
 .primary-button {
@@ -351,6 +441,18 @@ button {
 .canvas-label,
 .bank-meta {
   color: var(--muted);
+}
+
+#lesson-description {
+  display: none;
+}
+
+.quiz-panel > .panel-heading > :first-child {
+  display: none;
+}
+
+.quiz-panel > .panel-heading {
+  justify-content: flex-end;
 }
 
 .score-card {
@@ -427,6 +529,14 @@ button {
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
+}
+
+.stage-top {
+  align-items: center;
+}
+
+.stage-top .stage-bank-button {
+  margin-right: auto;
 }
 
 .stage-actions-nav {
@@ -1205,6 +1315,41 @@ body.canvas-expanded-mode {
 }
 
 @media (max-width: 919px) {
+  body.quiz-mode .app-shell {
+    width: calc(100vw - 8px);
+    padding-top: 4px;
+    padding-bottom: 4px;
+  }
+
+  body.quiz-mode .layout {
+    height: calc(100dvh - 8px);
+    margin-top: 0;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  body.quiz-mode .lesson-panel {
+    display: none;
+  }
+
+  body.quiz-mode .quiz-panel {
+    padding: 14px;
+  }
+
+  body.quiz-mode #question-stage {
+    margin-top: 0;
+    padding: 16px;
+  }
+
+  body.quiz-mode .stage-top {
+    gap: 8px;
+  }
+
+  body.quiz-mode .stage-bank-button {
+    min-height: 40px;
+    padding: 8px 14px;
+    font-size: 0.9rem;
+  }
+
   .app-shell {
     width: calc(100vw - 16px);
     padding-top: 10px;

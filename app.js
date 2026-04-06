@@ -53,7 +53,9 @@
   var prevButton = document.getElementById("prev-button");
   var nextButton = document.getElementById("next-button");
   var restartButton = document.getElementById("restart-button");
+  var enterQuizButton = document.getElementById("enter-quiz-button");
   var bankButton = document.getElementById("bank-button");
+  var stageBankButton = document.getElementById("stage-bank-button");
   var closeBankButton = document.getElementById("close-bank-button");
   var clearCanvasButton = document.getElementById("clear-canvas-button");
   var eraserButton = document.getElementById("eraser-button");
@@ -67,11 +69,34 @@
   var lastEraserCursorDiameter = 0;
   var ERASER_SIZE = 64;
 
+  normalizeStaticLabels();
+  setQuizScreenActive(false);
   initializeState();
   renderBopomofoPalette();
   setupCanvas();
   bindEvents();
   render();
+
+  function normalizeStaticLabels() {
+    if (enterQuizButton) {
+      enterQuizButton.textContent = "開始作答";
+    }
+    if (bankButton) {
+      bankButton.textContent = "檢視本課題庫";
+    }
+    if (stageBankButton) {
+      stageBankButton.textContent = "檢視本課題庫";
+    }
+  }
+
+  function setQuizScreenActive(isActive) {
+    if (!document.body) { return; }
+    document.body.classList.toggle("landing-mode", !isActive);
+    document.body.classList.toggle("quiz-mode", Boolean(isActive));
+    if (isActive && appShell) {
+      appShell.scrollTop = 0;
+    }
+  }
 
   function initializeState() {
     var sourceLessons = window.LESSONS || [];
@@ -112,8 +137,16 @@
     if (restartButton) {
       restartButton.addEventListener("click", restartLesson);
     }
+    if (enterQuizButton) {
+      enterQuizButton.addEventListener("click", function () {
+        setQuizScreenActive(true);
+      });
+    }
     if (bankButton) {
       bankButton.addEventListener("click", openBankDialog);
+    }
+    if (stageBankButton) {
+      stageBankButton.addEventListener("click", openBankDialog);
     }
     if (closeBankButton) {
       closeBankButton.addEventListener("click", closeBankDialog);
