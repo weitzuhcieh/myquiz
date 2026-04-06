@@ -34,14 +34,19 @@
 }
 
 html {
+  height: 100%;
   scroll-behavior: smooth;
   color-scheme: light;
   background: #fff7ef;
+  overflow: hidden;
+  overscroll-behavior-y: none;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
+  min-height: 100dvh;
+  height: 100%;
   color: var(--ink);
   font-family: var(--font-body);
   background:
@@ -50,6 +55,8 @@ body {
     radial-gradient(circle at 12% 78%, rgba(200, 241, 231, 0.88) 0, rgba(200, 241, 231, 0) 18%),
     linear-gradient(180deg, var(--bg-top) 0%, #fff5ee 32%, var(--bg-bottom) 100%);
   -webkit-text-size-adjust: 100%;
+  overflow: hidden;
+  overscroll-behavior-y: none;
 }
 
 html,
@@ -123,6 +130,12 @@ button {
   width: min(1160px, calc(100vw - 24px));
   margin: 0 auto;
   padding: 20px 0 34px;
+  height: 100vh;
+  height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .hero,
