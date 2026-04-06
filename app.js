@@ -56,12 +56,16 @@
   var bankButton = document.getElementById("bank-button");
   var closeBankButton = document.getElementById("close-bank-button");
   var clearCanvasButton = document.getElementById("clear-canvas-button");
+  var eraserButton = document.getElementById("eraser-button");
   var toggleLessonPanelButton = document.getElementById("toggle-lesson-panel");
 
   var drawing = false;
   var hasInk = false;
+  var isErasing = false;
   var isCanvasExpanded = false;
   var isLessonPanelCollapsed = true;
+  var lastEraserCursorDiameter = 0;
+  var ERASER_SIZE = 64;
 
   initializeState();
   renderBopomofoPalette();
@@ -92,6 +96,9 @@
   function bindEvents() {
     if (clearCanvasButton) {
       clearCanvasButton.addEventListener("click", clearCanvas);
+    }
+    if (eraserButton) {
+      eraserButton.addEventListener("click", toggleEraserMode);
     }
     if (toggleLessonPanelButton) {
       toggleLessonPanelButton.addEventListener("click", toggleLessonPanel);
@@ -627,6 +634,9 @@
 
     function getStrokeWidth(event) {
       var pressure = typeof event.pressure === "number" && event.pressure > 0 ? event.pressure : 0;
+      if (isErasing) {
+        return getCanvasEraserSize();
+      }
       if (event.pointerType === "pen") {
         return pressure > 0 ? 1.5 + (pressure * 2.5) : 2.5;
       }
@@ -644,13 +654,44 @@
       };
     }
 
+    function getCanvasEraserSize() {
+      var rect;
+      var scaleX;
+      var scaleY;
+      if (!canvas) { return ERASER_SIZE; }
+      rect = canvas.getBoundingClientRect();
+      if (!rect.width || !rect.height) { return ERASER_SIZE; }
+      scaleX = canvas.width / rect.width;
+      scaleY = canvas.height / rect.height;
+      return ERASER_SIZE * ((scaleX + scaleY) / 2);
+    }
+
+    function updateEraserCursor(event) {
+      var diameter;
+      if (!canvas) { return; }
+      if (!isErasing) {
+        lastEraserCursorDiameter = 0;
+        canvas.style.cursor = "";
+        return;
+      }
+
+      diameter = ERASER_SIZE;
+      if (diameter === lastEraserCursorDiameter) { return; }
+      lastEraserCursorDiameter = diameter;
+      canvas.style.cursor = buildEraserCursor(diameter);
+    }
+
     function startStroke(event) {
       var point;
       if (event.preventDefault) { event.preventDefault(); }
       drawing = true;
-      hasInk = true;
+      if (!isErasing) {
+        hasInk = true;
+      }
       updateSubmitButtonState(false);
       point = getPoint(event);
+      applyCanvasTool();
+      updateEraserCursor(event);
       canvasContext.lineWidth = getStrokeWidth(event);
       canvasContext.beginPath();
       canvasContext.moveTo(point.x, point.y);
@@ -661,6 +702,8 @@
       if (!drawing) { return; }
       if (event.preventDefault) { event.preventDefault(); }
       point = getPoint(event);
+      applyCanvasTool();
+      updateEraserCursor(event);
       canvasContext.lineWidth = getStrokeWidth(event);
       canvasContext.lineTo(point.x, point.y);
       canvasContext.stroke();
@@ -670,6 +713,12 @@
       if (!drawing) { return; }
       drawing = false;
       canvasContext.closePath();
+      syncCanvasInkState();
+    }
+
+    function handleCursorPreview(event) {
+      if (!isErasing || !event || event.pointerType === "touch") { return; }
+      updateEraserCursor(event);
     }
 
     canvas.addEventListener("pointerdown", startStroke);
@@ -677,6 +726,9 @@
     canvas.addEventListener("pointerup", endStroke);
     canvas.addEventListener("pointercancel", endStroke);
     canvas.addEventListener("pointerleave", endStroke);
+    canvas.addEventListener("pointerenter", handleCursorPreview);
+
+    canvas.addEventListener("pointermove", handleCursorPreview);
 
     canvas.addEventListener("mousedown", startStroke);
     canvas.addEventListener("mousemove", moveStroke);
@@ -699,6 +751,7 @@
     canvasContext.strokeStyle = "#1d2730";
     drawing = false;
     hasInk = false;
+    applyCanvasTool();
   }
 
   function restoreCanvasFromSavedImage(dataUrl) {
@@ -710,9 +763,64 @@
       canvasContext.fillStyle = "#ffffff";
       canvasContext.fillRect(0, 0, canvas.width, canvas.height);
       canvasContext.drawImage(image, 0, 0, canvas.width, canvas.height);
-      hasInk = true;
+      syncCanvasInkState();
     };
     image.src = dataUrl;
+  }
+
+  function toggleEraserMode() {
+    isErasing = !isErasing;
+    applyCanvasTool();
+  }
+
+  function applyCanvasTool() {
+    if (!canvasContext || !canvas) { return; }
+    if (isErasing) {
+      canvasContext.globalCompositeOperation = "destination-out";
+      canvasContext.strokeStyle = "rgba(0, 0, 0, 1)";
+      canvas.classList.add("is-erasing");
+      canvas.style.cursor = buildEraserCursor(ERASER_SIZE);
+    } else {
+      canvasContext.globalCompositeOperation = "source-over";
+      canvasContext.strokeStyle = "#1d2730";
+      canvas.classList.remove("is-erasing");
+      lastEraserCursorDiameter = 0;
+      canvas.style.cursor = "";
+    }
+    renderCanvasToolState();
+  }
+
+  function buildEraserCursor(diameter) {
+    var size = diameter + 8;
+    var radius = diameter / 2;
+    var center = size / 2;
+    var svg =
+      '<svg xmlns="http://www.w3.org/2000/svg" width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + " " + size + '">' +
+      '<circle cx="' + center + '" cy="' + center + '" r="' + radius + '" fill="rgba(129, 213, 154, 0.18)" stroke="rgba(60, 145, 92, 0.95)" stroke-width="1.6"/>' +
+      "</svg>";
+    return 'url("data:image/svg+xml;utf8,' + encodeURIComponent(svg) + '") ' + center + " " + center + ", crosshair";
+  }
+
+  function renderCanvasToolState() {
+    if (!eraserButton) { return; }
+    eraserButton.classList.toggle("is-active", isErasing);
+    eraserButton.setAttribute("aria-pressed", isErasing ? "true" : "false");
+    eraserButton.setAttribute("title", isErasing ? "切回書寫" : "切換橡皮擦");
+    eraserButton.setAttribute("aria-label", isErasing ? "切回書寫" : "切換橡皮擦");
+  }
+
+  function syncCanvasInkState() {
+    var pixels;
+    var index;
+    if (!canvasContext || !canvas) { return; }
+    pixels = canvasContext.getImageData(0, 0, canvas.width, canvas.height).data;
+    hasInk = false;
+    for (index = 0; index < pixels.length; index += 4) {
+      if (pixels[index] !== 255 || pixels[index + 1] !== 255 || pixels[index + 2] !== 255 || pixels[index + 3] !== 255) {
+        hasInk = true;
+        return;
+      }
+    }
   }
 
   function buildPromptMarkup(item, currentCharIndex) {
