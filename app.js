@@ -56,16 +56,19 @@
   var enterQuizButton = document.getElementById("enter-quiz-button");
   var bankButton = document.getElementById("bank-button");
   var stageBankButton = document.getElementById("stage-bank-button");
+  var stageLessonButton = document.getElementById("stage-lesson-button");
   var closeBankButton = document.getElementById("close-bank-button");
   var clearCanvasButton = document.getElementById("clear-canvas-button");
   var eraserButton = document.getElementById("eraser-button");
   var toggleLessonPanelButton = document.getElementById("toggle-lesson-panel");
+  var lessonDrawerBackdrop = document.getElementById("lesson-drawer-backdrop");
 
   var drawing = false;
   var hasInk = false;
   var isErasing = false;
   var isCanvasExpanded = false;
   var isLessonPanelCollapsed = true;
+  var isLessonDrawerOpen = false;
   var lastEraserCursorDiameter = 0;
   var ERASER_SIZE = 64;
 
@@ -93,6 +96,9 @@
     if (!document.body) { return; }
     document.body.classList.toggle("landing-mode", !isActive);
     document.body.classList.toggle("quiz-mode", Boolean(isActive));
+    if (!isActive) {
+      closeLessonDrawer();
+    }
     if (isActive && appShell) {
       appShell.scrollTop = 0;
     }
@@ -148,6 +154,9 @@
     if (stageBankButton) {
       stageBankButton.addEventListener("click", openBankDialog);
     }
+    if (stageLessonButton) {
+      stageLessonButton.addEventListener("click", toggleLessonDrawer);
+    }
     if (closeBankButton) {
       closeBankButton.addEventListener("click", closeBankDialog);
     }
@@ -182,10 +191,15 @@
         }
       });
     }
+    if (lessonDrawerBackdrop) {
+      lessonDrawerBackdrop.addEventListener("click", closeLessonDrawer);
+    }
+    document.addEventListener("keydown", handleGlobalKeydown);
   }
 
   function render() {
     renderLessonPanelState();
+    renderLessonDrawerState();
     renderLessonList();
     renderCurrentLesson();
   }
@@ -206,6 +220,7 @@
       button.addEventListener("click", function () {
         state.currentLessonId = lesson.id;
         clearCanvas();
+        closeLessonDrawer();
         render();
       });
       lessonList.appendChild(button);
@@ -371,6 +386,17 @@
     render();
   }
 
+  function toggleLessonDrawer() {
+    isLessonDrawerOpen = !isLessonDrawerOpen;
+    renderLessonDrawerState();
+  }
+
+  function closeLessonDrawer() {
+    if (!isLessonDrawerOpen) { return; }
+    isLessonDrawerOpen = false;
+    renderLessonDrawerState();
+  }
+
   function renderLessonPanelState() {
     if (lessonPanel) {
       lessonPanel.classList.toggle("is-collapsed", isLessonPanelCollapsed);
@@ -382,6 +408,24 @@
       toggleLessonPanelButton.textContent = isLessonPanelCollapsed ? "⇥" : "⇤";
       toggleLessonPanelButton.setAttribute("aria-label", isLessonPanelCollapsed ? "展開課程欄" : "縮起課程欄");
       toggleLessonPanelButton.setAttribute("title", isLessonPanelCollapsed ? "展開課程欄" : "縮起課程欄");
+    }
+  }
+
+  function renderLessonDrawerState() {
+    if (document.body) {
+      document.body.classList.toggle("lesson-drawer-open", isLessonDrawerOpen);
+    }
+    if (lessonDrawerBackdrop) {
+      lessonDrawerBackdrop.hidden = !isLessonDrawerOpen;
+    }
+    if (stageLessonButton) {
+      stageLessonButton.setAttribute("aria-expanded", isLessonDrawerOpen ? "true" : "false");
+    }
+  }
+
+  function handleGlobalKeydown(event) {
+    if (event.key === "Escape") {
+      closeLessonDrawer();
     }
   }
 

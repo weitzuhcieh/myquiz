@@ -415,6 +415,10 @@ body.quiz-mode .quiz-panel {
   white-space: nowrap;
 }
 
+.stage-lesson-button {
+  display: none;
+}
+
 
 .lesson-button,
 .secondary-button,
@@ -601,6 +605,10 @@ body.quiz-mode #question-stage {
   margin-right: 0;
 }
 
+.stage-top-main .stage-lesson-button {
+  order: -1;
+}
+
 body.quiz-mode .stage-top {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -629,6 +637,35 @@ body.quiz-mode .stage-bank-button {
 
 body.quiz-mode .stage-bank-button::before {
   content: "庫";
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.72);
+  color: #6d4760;
+  font-family: var(--font-display);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+body.quiz-mode .stage-lesson-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
+  padding: 0;
+  font-size: 0;
+  line-height: 1;
+  flex: 0 0 auto;
+}
+
+body.quiz-mode .stage-lesson-button::before {
+  content: "課";
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -779,6 +816,14 @@ body.quiz-mode .stage-sentence .blank-inline {
   border: 0;
 }
 
+.lesson-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1040;
+  background: rgba(113, 71, 93, 0.24);
+  backdrop-filter: blur(4px);
+}
+
 .blank-inline {
   display: inline-grid;
   place-items: center;
@@ -864,19 +909,49 @@ body.quiz-mode .canvas-wrap {
 
 .canvas-tools {
   position: absolute;
+  top: 28px;
+  right: 28px;
   bottom: 28px;
   left: 28px;
-  right: 28px;
   z-index: 2;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  --canvas-tool-gap: 88px;
+  pointer-events: none;
 }
 
 body.quiz-mode .canvas-tools {
+  top: 14px;
+  right: 14px;
   bottom: 14px;
   left: 14px;
-  right: 14px;
+  --canvas-tool-gap: 74px;
+}
+
+.canvas-tools .canvas-icon-button {
+  position: absolute;
+  right: 0;
+  pointer-events: auto;
+}
+
+#clear-canvas-button,
+#eraser-button,
+#expand-canvas-button {
+  top: 50%;
+}
+
+#clear-canvas-button {
+  transform: translateY(calc(-50% - var(--canvas-tool-gap)));
+}
+
+#eraser-button {
+  transform: translateY(-50%);
+}
+
+#expand-canvas-button {
+  transform: translateY(calc(-50% + var(--canvas-tool-gap)));
+}
+
+#submit-answer-button {
+  bottom: 0;
 }
 
 #handwriting-canvas {
@@ -924,9 +999,11 @@ body.quiz-mode .canvas-tools {
 }
 
 .canvas-wrap.is-expanded .canvas-tools {
-  left: 24px;
+  top: 24px;
   right: 24px;
   bottom: 24px;
+  left: 24px;
+  --canvas-tool-gap: 88px;
 }
 
 body.canvas-expanded-mode {
@@ -1464,6 +1541,27 @@ body.quiz-mode .canvas-icon-button .icon-button-mark {
     display: none;
   }
 
+  body.quiz-mode.lesson-drawer-open .lesson-panel {
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    bottom: 12px;
+    z-index: 1050;
+    display: flex;
+    flex-direction: column;
+    width: min(320px, calc(100vw - 32px));
+    max-width: calc(100vw - 32px);
+    padding: 18px 16px;
+    border-radius: 28px;
+    box-shadow: 0 28px 48px rgba(154, 95, 126, 0.24);
+  }
+
+  body.quiz-mode.lesson-drawer-open .lesson-list {
+    max-height: none;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
   body.quiz-mode .quiz-panel {
     grid-column: 1;
   }
@@ -1550,6 +1648,27 @@ body.quiz-mode .canvas-icon-button .icon-button-mark {
     display: none;
   }
 
+  body.quiz-mode.lesson-drawer-open .lesson-panel {
+    position: fixed;
+    top: 8px;
+    left: 8px;
+    bottom: 8px;
+    z-index: 1050;
+    display: flex;
+    flex-direction: column;
+    width: min(300px, calc(100vw - 24px));
+    max-width: calc(100vw - 24px);
+    padding: 16px 14px;
+    border-radius: 24px;
+    box-shadow: 0 24px 40px rgba(154, 95, 126, 0.24);
+  }
+
+  body.quiz-mode.lesson-drawer-open .lesson-list {
+    max-height: none;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
   body.quiz-mode .quiz-panel {
     padding: 10px;
   }
@@ -1571,6 +1690,21 @@ body.quiz-mode .canvas-icon-button .icon-button-mark {
     min-height: 34px;
     padding: 0;
     font-size: 0;
+  }
+
+  body.quiz-mode .stage-lesson-button {
+    min-width: 34px;
+    width: 34px;
+    height: 34px;
+    min-height: 34px;
+    padding: 0;
+    font-size: 0;
+  }
+
+  body.quiz-mode .stage-lesson-button::before {
+    width: 20px;
+    height: 20px;
+    font-size: 0.78rem;
   }
 
   body.quiz-mode .stage-bank-button::before {
@@ -1647,9 +1781,11 @@ body.quiz-mode .canvas-icon-button .icon-button-mark {
   }
 
   .canvas-tools {
+    top: 12px;
+    right: 12px;
     bottom: 12px;
     left: 12px;
-    right: 12px;
+    --canvas-tool-gap: 66px;
   }
 
   .canvas-wrap.is-expanded {
@@ -1678,5 +1814,11 @@ body.quiz-mode .canvas-icon-button .icon-button-mark {
 
   .bank-form {
     padding: 16px;
+  }
+}
+
+@media (min-width: 1281px) {
+  body.quiz-mode .stage-lesson-button {
+    display: none;
   }
 }
