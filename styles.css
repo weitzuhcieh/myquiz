@@ -692,8 +692,8 @@ body.quiz-mode .stage-lesson-button::before {
   font-weight: 700;
 }
 
+#lesson-progress,
 #question-progress,
-#question-hint,
 #char-progress,
 #char-label {
   display: inline-flex;
@@ -706,30 +706,56 @@ body.quiz-mode .stage-lesson-button::before {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
-#question-progress {
-  color: #a85b7a;
-  background: linear-gradient(180deg, rgba(255, 236, 244, 0.96) 0%, rgba(255, 250, 238, 0.96) 100%);
+#lesson-progress {
+  color: #9d7a2d;
+  background: linear-gradient(180deg, rgba(255, 247, 196, 0.95) 0%, rgba(255, 252, 233, 0.95) 100%);
 }
 
-#question-hint {
+#lesson-progress[data-lesson-number="1"] {
+  padding-inline: 18px;
+  color: #8f4f14;
+  background: linear-gradient(180deg, rgba(255, 219, 141, 0.98) 0%, rgba(255, 239, 194, 0.98) 100%);
+  border-color: rgba(233, 175, 75, 0.72);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.92),
+    0 8px 18px rgba(237, 185, 88, 0.18);
+}
+
+#question-progress {
   color: #7f6a8a;
   background: linear-gradient(180deg, rgba(233, 247, 255, 0.96) 0%, rgba(255, 255, 255, 0.94) 100%);
 }
 
+body.quiz-mode #lesson-progress,
 body.quiz-mode #question-progress {
   flex: 0 0 auto;
   min-height: 34px;
   padding: 6px 12px;
   font-size: 0.92rem;
-}
-
-body.quiz-mode #question-hint {
-  flex: 1 1 auto;
-  min-height: 34px;
-  padding: 6px 12px;
   white-space: normal;
   line-height: 1.2;
-  font-size: 0.92rem;
+}
+
+body.quiz-mode #lesson-progress {
+  padding: 7px 14px;
+  font-size: 0.96rem;
+}
+
+body.quiz-mode #lesson-progress[data-lesson-number="1"] {
+  width: 260px;
+  min-height: 38px;
+  padding: 8px 18px;
+  font-size: 1.02rem;
+  font-weight: 800;
+  justify-content: center;
+}
+
+body.quiz-mode #question-progress {
+  flex: 1 1 auto;
+  min-height: 30px;
+  padding: 4px 10px;
+  font-size: 0.84rem;
+  letter-spacing: -0.01em;
 }
 
 body.quiz-mode .stage-top-actions #char-progress {

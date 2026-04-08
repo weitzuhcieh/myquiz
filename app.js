@@ -23,8 +23,8 @@
   var scoreLabel = document.getElementById("score-label");
   var questionStage = document.getElementById("question-stage");
   var reviewStage = document.getElementById("review-stage");
+  var lessonProgress = document.getElementById("lesson-progress");
   var questionProgress = document.getElementById("question-progress");
-  var questionHint = document.getElementById("question-hint");
   var questionSentence = document.getElementById("question-sentence");
   var charProgress = document.getElementById("char-progress");
   var charLabel = document.getElementById("char-label");
@@ -280,8 +280,11 @@
     var isLastQuestion = lesson.currentIndex === lesson.items.length - 1;
     var isLastChar = currentCharIndex === chars.length - 1;
 
-    questionProgress.textContent = "第 " + (lesson.currentIndex + 1) + " 題 / 共 " + lesson.items.length + " 題";
-    questionHint.textContent = "注音提示：" + (item.hint || "無");
+    if (lessonProgress) {
+      lessonProgress.textContent = getLessonBadgeLabel(lesson);
+      lessonProgress.setAttribute("data-lesson-number", getLessonBadgeNumber(lesson) || "");
+    }
+    questionProgress.textContent = "第" + (lesson.currentIndex + 1) + "題/共" + lesson.items.length + "題";
     questionSentence.innerHTML = buildPromptMarkup(item, currentCharIndex);
     charProgress.textContent = "第 " + (currentCharIndex + 1) + " 字 / 共 " + chars.length + " 字";
     charLabel.textContent = "現在寫：第 " + (currentCharIndex + 1) + " 字　注音：" + (hints[currentCharIndex] || "無");
@@ -350,26 +353,27 @@
     var item = lesson ? lesson.items[lesson.currentIndex] : null;
     var chars;
     var currentCharIndex;
-    var isLastChar;
+    var firstIncompleteCharIndex;
 
     if (!item) { return; }
 
     chars = splitAnswerUnits(item.answer);
     currentCharIndex = normalizeCharIndex(item, chars.length);
-    isLastChar = currentCharIndex === chars.length - 1;
 
     item.handwritingImages[currentCharIndex] = hasInk ? canvas.toDataURL("image/png") : null;
 
-    if (!isLastChar) {
-      item.currentCharIndex = currentCharIndex + 1;
-      clearCanvas();
+    firstIncompleteCharIndex = getFirstIncompleteCharIndex(item, chars.length);
+
+    if (firstIncompleteCharIndex >= 0) {
+      item.isDone = false;
+      item.currentCharIndex = firstIncompleteCharIndex;
       renderCurrentLesson();
       return;
     }
 
     item.currentCharIndex = chars.length - 1;
     item.isDone = true;
-    renderCurrentLesson();
+    advanceAfterCompletedQuestion(lesson);
   }
 
   function restartLesson() {
@@ -1155,6 +1159,33 @@
     return Math.max(lesson.items.length - 1, 0);
   }
 
+  function getFirstIncompleteCharIndex(item, charCount) {
+    var index;
+
+    for (index = 0; index < charCount; index += 1) {
+      if (!item.handwritingImages[index]) {
+        return index;
+      }
+    }
+
+    return -1;
+  }
+
+  function advanceAfterCompletedQuestion(lesson) {
+    if (!lesson) { return; }
+
+    if (lesson.currentIndex >= lesson.items.length - 1) {
+      lesson.currentIndex = lesson.items.length;
+      clearCanvas();
+      render();
+      return;
+    }
+
+    lesson.currentIndex += 1;
+    clearCanvas();
+    renderCurrentLesson();
+  }
+
   function normalizeCharIndex(item, charCount) {
     if (typeof item.currentCharIndex !== "number" || item.currentCharIndex < 0) {
       item.currentCharIndex = 0;
@@ -1247,6 +1278,37 @@
   function getShortLessonName(name) {
     var match = String(name || "").match(/^第[^ ]+課/);
     return match ? match[0] : String(name || "");
+  }
+
+  function getLessonBadgeLabel(lesson) {
+    var idMatch;
+    var nameMatch;
+    if (!lesson) {
+      return "課程";
+    }
+    idMatch = String(lesson.id || "").match(/lesson-(\d+)/i);
+    if (idMatch) {
+      return "第" + idMatch[1] + "課";
+    }
+    nameMatch = String(lesson.name || "").match(/第\s*(\d+)\s*課/);
+    if (nameMatch) {
+      return "第" + nameMatch[1] + "課";
+    }
+    return String(lesson.name || "");
+  }
+
+  function getLessonBadgeNumber(lesson) {
+    var idMatch;
+    var nameMatch;
+    if (!lesson) {
+      return "";
+    }
+    idMatch = String(lesson.id || "").match(/lesson-(\d+)/i);
+    if (idMatch) {
+      return idMatch[1];
+    }
+    nameMatch = String(lesson.name || "").match(/第\s*(\d+)\s*課/);
+    return nameMatch ? nameMatch[1] : "";
   }
 
   function updateSubmitButtonState(isSaved) {
