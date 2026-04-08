@@ -155,7 +155,7 @@
       stageBankButton.addEventListener("click", openBankDialog);
     }
     if (stageLessonButton) {
-      stageLessonButton.addEventListener("click", toggleLessonDrawer);
+      stageLessonButton.addEventListener("click", openLessonList);
     }
     if (closeBankButton) {
       closeBankButton.addEventListener("click", closeBankDialog);
@@ -382,13 +382,32 @@
   }
 
   function toggleLessonPanel() {
+    if (shouldHideLessonListFromPanel()) {
+      hideLessonList();
+      return;
+    }
+
     isLessonPanelCollapsed = !isLessonPanelCollapsed;
     render();
   }
 
-  function toggleLessonDrawer() {
-    isLessonDrawerOpen = !isLessonDrawerOpen;
-    renderLessonDrawerState();
+  function openLessonList() {
+    isLessonPanelCollapsed = false;
+    isLessonDrawerOpen = shouldUseLessonDrawer();
+    render();
+  }
+
+  function hideLessonList() {
+    if (shouldUseLessonDrawer()) {
+      closeLessonDrawer();
+      return;
+    }
+
+    if (!isLessonPanelCollapsed) {
+      isLessonDrawerOpen = false;
+      isLessonPanelCollapsed = true;
+      render();
+    }
   }
 
   function closeLessonDrawer() {
@@ -398,6 +417,9 @@
   }
 
   function renderLessonPanelState() {
+    var isQuizShortcutVisible = isLessonShortcutVisible();
+    var isLessonListVisible = isLessonListShown();
+
     if (lessonPanel) {
       lessonPanel.classList.toggle("is-collapsed", isLessonPanelCollapsed);
     }
@@ -405,22 +427,64 @@
       appShell.classList.toggle("lesson-panel-collapsed", isLessonPanelCollapsed);
     }
     if (toggleLessonPanelButton) {
-      toggleLessonPanelButton.textContent = isLessonPanelCollapsed ? "⇥" : "⇤";
-      toggleLessonPanelButton.setAttribute("aria-label", isLessonPanelCollapsed ? "展開課程欄" : "縮起課程欄");
-      toggleLessonPanelButton.setAttribute("title", isLessonPanelCollapsed ? "展開課程欄" : "縮起課程欄");
+      if (isQuizShortcutVisible) {
+        toggleLessonPanelButton.textContent = isLessonListVisible ? "\u21e4" : "\u21e5";
+        toggleLessonPanelButton.setAttribute(
+          "aria-label",
+          isLessonListVisible ? "\u96b1\u85cf\u8ab2\u7a0b\u5217\u8868" : "\u5c55\u958b\u8ab2\u7a0b\u5217\u8868"
+        );
+        toggleLessonPanelButton.setAttribute(
+          "title",
+          isLessonListVisible ? "\u96b1\u85cf\u8ab2\u7a0b\u5217\u8868" : "\u5c55\u958b\u8ab2\u7a0b\u5217\u8868"
+        );
+      } else {
+        toggleLessonPanelButton.textContent = isLessonPanelCollapsed ? "\u21e5" : "\u21e4";
+        toggleLessonPanelButton.setAttribute(
+          "aria-label",
+          isLessonPanelCollapsed ? "\u5c55\u958b\u8ab2\u7a0b\u6b04" : "\u7e2e\u8d77\u8ab2\u7a0b\u6b04"
+        );
+        toggleLessonPanelButton.setAttribute(
+          "title",
+          isLessonPanelCollapsed ? "\u5c55\u958b\u8ab2\u7a0b\u6b04" : "\u7e2e\u8d77\u8ab2\u7a0b\u6b04"
+        );
+      }
     }
   }
 
   function renderLessonDrawerState() {
+    var shouldShowDrawer = shouldUseLessonDrawer() && isLessonDrawerOpen;
+
     if (document.body) {
-      document.body.classList.toggle("lesson-drawer-open", isLessonDrawerOpen);
+      document.body.classList.toggle("lesson-drawer-open", shouldShowDrawer);
     }
     if (lessonDrawerBackdrop) {
-      lessonDrawerBackdrop.hidden = !isLessonDrawerOpen;
+      lessonDrawerBackdrop.hidden = !shouldShowDrawer;
     }
     if (stageLessonButton) {
-      stageLessonButton.setAttribute("aria-expanded", isLessonDrawerOpen ? "true" : "false");
+      stageLessonButton.setAttribute("aria-expanded", isLessonListShown() ? "true" : "false");
     }
+  }
+
+  function shouldUseLessonDrawer() {
+    return window.matchMedia("(max-width: 699px), (min-width: 920px) and (max-width: 1280px)").matches;
+  }
+
+  function isQuizModeActive() {
+    return Boolean(document.body) && document.body.classList.contains("quiz-mode");
+  }
+
+  function isLessonShortcutVisible() {
+    return Boolean(stageLessonButton) &&
+      isQuizModeActive() &&
+      window.getComputedStyle(stageLessonButton).display !== "none";
+  }
+
+  function isLessonListShown() {
+    return shouldUseLessonDrawer() ? isLessonDrawerOpen : !isLessonPanelCollapsed;
+  }
+
+  function shouldHideLessonListFromPanel() {
+    return isLessonShortcutVisible() && isLessonListShown();
   }
 
   function handleGlobalKeydown(event) {
