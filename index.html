@@ -50,17 +50,19 @@
 
         <section id="question-stage" class="stage-card" hidden>
           <div class="stage-top">
+            <div class="stage-top-main">
             <button id="stage-bank-button" class="secondary-button stage-bank-button" type="button">瑼Ｚ??祈玨憿澈</button>
             <span id="question-progress" class="stage-progress"></span>
-            <span id="question-hint" class="stage-hint"></span>
-          </div>
-          <p id="question-sentence" class="stage-sentence"></p>
-          <div class="char-status">
+              <span id="question-hint" class="stage-hint"></span>
+            </div>
+            <div class="stage-top-actions">
             <span id="char-progress" class="stage-progress"></span>
             <button id="prev-button" class="secondary-button nav-button nav-button-inline" type="button">上一題</button>
             <button id="next-button" class="secondary-button nav-button nav-button-inline" type="button">下一題</button>
-            <span id="char-label" class="stage-hint"></span>
+            </div>
           </div>
+          <p id="question-sentence" class="stage-sentence"></p>
+          <span id="char-label" class="stage-hint sr-only"></span>
           <div class="canvas-wrap canvas-wrap--inline">
             <canvas id="handwriting-canvas" width="900" height="900" aria-label="手寫畫布"></canvas>
             <div class="canvas-tools">
