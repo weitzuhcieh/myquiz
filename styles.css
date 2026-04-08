@@ -1217,6 +1217,14 @@ body.quiz-mode .canvas-icon-button .icon-button-mark {
   margin-bottom: 16px;
 }
 
+.review-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .compare-panel {
   display: grid;
   gap: 14px;

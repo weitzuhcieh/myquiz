@@ -30,6 +30,8 @@
   var charLabel = document.getElementById("char-label");
   var reviewList = document.getElementById("review-list");
   var reviewTemplate = document.getElementById("review-template");
+  var reviewHeader = reviewStage ? reviewStage.querySelector(".review-header h2") : null;
+  var reviewEyebrow = reviewStage ? reviewStage.querySelector(".review-header .eyebrow") : null;
   var bankDialog = document.getElementById("bank-dialog");
   var bankTitle = document.getElementById("bank-title");
   var bankList = document.getElementById("bank-list");
@@ -53,6 +55,7 @@
   var prevButton = document.getElementById("prev-button");
   var nextButton = document.getElementById("next-button");
   var restartButton = document.getElementById("restart-button");
+  var closeReviewButton = document.getElementById("close-review-button");
   var enterQuizButton = document.getElementById("enter-quiz-button");
   var bankButton = document.getElementById("bank-button");
   var stageBankButton = document.getElementById("stage-bank-button");
@@ -73,6 +76,18 @@
   var ERASER_SIZE = 64;
 
   normalizeStaticLabels();
+  if (reviewEyebrow) {
+    reviewEyebrow.textContent = "\u7b54\u6848\u6aa2\u67e5";
+  }
+  if (reviewHeader) {
+    reviewHeader.textContent = "\u7b54\u6848\u6aa2\u67e5";
+  }
+  if (closeReviewButton) {
+    closeReviewButton.textContent = "\u8fd4\u56de\u4f5c\u7b54";
+  }
+  if (restartButton) {
+    restartButton.textContent = "\u91cd\u65b0\u958b\u59cb\u672c\u6b21\u8ab2\u7a0b";
+  }
   setQuizScreenActive(false);
   initializeState();
   renderBopomofoPalette();
@@ -142,6 +157,9 @@
     }
     if (restartButton) {
       restartButton.addEventListener("click", restartLesson);
+    }
+    if (closeReviewButton) {
+      closeReviewButton.addEventListener("click", closeReviewStage);
     }
     if (enterQuizButton) {
       enterQuizButton.addEventListener("click", function () {
@@ -364,6 +382,17 @@
     render();
   }
 
+  function closeReviewStage() {
+    var lesson = getCurrentLesson();
+    var returnIndex = 0;
+
+    if (!lesson) { return; }
+
+    returnIndex = getReviewReturnIndex(lesson);
+    lesson.currentIndex = returnIndex;
+    render();
+  }
+
   function toggleCanvasExpand() {
     isCanvasExpanded = !isCanvasExpanded;
     if (canvasWrap) {
@@ -488,6 +517,11 @@
   }
 
   function handleGlobalKeydown(event) {
+    if (reviewStage && !reviewStage.hidden && event.key === "Escape") {
+      closeReviewStage();
+      return;
+    }
+
     if (event.key === "Escape") {
       closeLessonDrawer();
     }
@@ -1107,6 +1141,18 @@
       }
     });
     return blanks;
+  }
+
+  function getReviewReturnIndex(lesson) {
+    var index;
+
+    for (index = 0; index < lesson.items.length; index += 1) {
+      if (!lesson.items[index].isDone) {
+        return index;
+      }
+    }
+
+    return Math.max(lesson.items.length - 1, 0);
   }
 
   function normalizeCharIndex(item, charCount) {
